@@ -61,18 +61,18 @@ class ProductController extends Controller{
 
         $instance       = new $row->platform->object($row, $row->cookie);
         set_time_limit(0);
-        try {
+        // try {
             for(;$page <= 380; $page++){
                 $res            = $instance->getProducts($page, $pagesize, $row);
-                break;
+                // break;
             }
             if($res === true){
                 return $this->success('成功!');
             }
             return $this->error($res);
-        } catch (\Exception $e) {
-            return $this->error('Exception: ' . $e->getMessage());   
-        }
+        // } catch (\Exception $e) {
+        //     return $this->error('Exception: ' . $e->getMessage());   
+        // }
     }
 
     /**
@@ -159,7 +159,8 @@ class ProductController extends Controller{
             if(!$instance->saveOrders($list)){
                 return $this->error(implode("<br>\r\n", $instance->errs()));
             }
-            return $this->success('成功!');
+            $last   = Order::select('orderid', 'store_id', 'platform_id', 'status')->where('platform_id', $platform)->where('store_id', $storeid)->orderByDesc('id')->first();
+            return $this->success($last, '成功!');
         } catch (\Exception $e) {
             return $this->error($e->getMessage());
         }

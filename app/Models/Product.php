@@ -13,7 +13,7 @@ class Product extends Model{
     /**
      * 将平台传递的商品列表信息写入数据库,也就是采集入库
      */
-    public static function saveProduct($data, Factory $oob, $platform_id){
-        return $oob->saveProducts($data, $platform_id);
+    public static function saveProduct($data, Factory $oob){
+        return $oob->saveProducts($data, $oob->getStore());
     }
 }

@@ -88,7 +88,7 @@ class Eleme implements Factory{
         if(!$data){
             return '产品数据解析失败! ' . $content;
         }
-        if(!Product::saveProduct($data, $this, $this->store->platform->id)){
+        if(!Product::saveProduct($data, $this)){
             return implode("\r\n", $this->errs());
         }
         if(isset($data['ret'][0]) && strpos($data['ret'][0], '成功') !== false){
@@ -300,6 +300,10 @@ class Eleme implements Factory{
 		exec($cmd, $out);
 		return $out[0] ?? null;
         // '6f2101aaaa553684d515c7f39f3f2997&1694153542465&12574478&{"pageSize":20,"pageNum":1,"sellerId":"2216508507961","storeIds":"[\"1097214140\"]","titleWithoutSplitting":true,"minQuantity":null,"maxQuantity":null}', '11e0d85dabe8b8e9a2f7fc7f9e25f23a'
+	}
+
+	public function getStore(){
+		return $this->store;
 	}
 }
 

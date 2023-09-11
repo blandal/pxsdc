@@ -20,20 +20,30 @@ class SaveProducts{
 	private $addBases 	= [];
 	private $addSpus 	= [];
 	private $addSkus 	= [];
-	public function __construct(array $data, $store){
+	public function __construct(array $data, Store $store){
 		$this->store 		= $store;
 		$this->platform 	= $store->platform->id;
 		$this->stores 		= Store::getStoreId2Name($this->platform);
 		$this->dbstore 		= $this->stores;
-		// dd($data);
 		if(!isset($data[0])){
 			if(!isset($data['data']['data'])){
 				return $this->seterr('传入数据格式错误,不是一个数组或者没有 data 的 key' . json_encode($data, JSON_UNESCAPED_UNICODE));
 			}
 			$data 	= $data['data']['data'];
 		}
+
+		$productIds 	= array_column($data, 'itemId');
+		$dbPros 		= ProductSku::whereIn('itemId', $productIds)->where('platform_id', $store->platform->id)->where('storeId', $this->store->store_id)->pluck('id', 'itemId')->toArray();
+		// dd($productIds, $dbPros);
+
 		try {
 			foreach($data as $item){
+				if(!isset($item['itemId'])){
+					continue;
+				}
+				if(isset($dbPros[$item['itemId']])){
+					continue;
+				}
 				$this->fmtrow($item);
 				if($this->status == false){
 					break;
@@ -91,7 +101,7 @@ class SaveProducts{
 	 */
 	private function fmtrow($row){
 		// dd($row);
-		if(!isset($row['itemId'], $row['title'])){
+		if(!isset($row['title'])){
 			return $this->seterr('产品 itemId 和 title 不存在!');
 		}
 		$row['title']	= trim($row['title']);

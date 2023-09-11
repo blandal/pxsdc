@@ -46,7 +46,7 @@ class Meituan implements Factory{
         if(!$data){
             return '产品数据解析失败! ' . $content;
         }
-        if(!Product::saveProduct($data, $this, $store->platform->id)){
+        if(!Product::saveProduct($data, $this)){
             return implode("\r\n", $this->errs());
         }
         if(isset($data['code']) && $data['code'] == 0){
@@ -128,7 +128,7 @@ class Meituan implements Factory{
 	 * @return bool
 	 */
 	public function saveProducts(array $data) :bool{
-		$this->method 	= new \App\Takeaways\Meituans\SaveProducts($data, $this->store->platform->id);
+		$this->method 	= new \App\Takeaways\Meituans\SaveProducts($data, $this->store);
 		return $this->method->render();
 	}
 
@@ -138,11 +138,15 @@ class Meituan implements Factory{
 	 * @return bool
 	 */
 	public function saveOrders(array $data) :bool{
-		$this->method 	= new \App\Takeaways\Meituans\SaveOrders($data, $this->store->platform->id);
+		$this->method 	= new \App\Takeaways\Meituans\SaveOrders($data, $this->store);
 		return $this->method->render();
 	}
 
 	public function errs(){
 		return $this->method->getError();
+	}
+
+	public function getStore(){
+		return $this->store;
 	}
 }
