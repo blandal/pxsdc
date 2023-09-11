@@ -7,8 +7,11 @@ namespace App\Takeaways;
 use App\Takeaways\Factory;
 use QL\QueryList;
 use App\Models\Product;
+use App\Models\ProductSku;
+use App\Models\Store;
 class Meituan implements Factory{
 	private $domain 	= 'https://qnh.meituan.com/api/v1/';
+	private $store 		= null;
 	protected $cookie 	= null;
 	protected $method 	= null;
 	protected $url 		= null;
@@ -18,11 +21,14 @@ class Meituan implements Factory{
 	 * 初始化时必须传入美团登录的cookie,此对象不会自动获取cookie.
 	 * cookie 格式是一个数组 ['key' => $value] 格式
 	 */
-	public function __construct(array $cookie = []){
-		if($cookie){
-			$this->cookie 	= $cookie;
-		}
+	public function __construct(Store $store){
+		$this->store 	= $store;
+		$this->cookie 	= $store->cookie;
 		return $this;
+	}
+
+	public function getPlatform(){
+		return $this->store->platform;
 	}
 
 
@@ -31,7 +37,7 @@ class Meituan implements Factory{
 	 * 请使用链式调用设置请求参数,调用方法为牵牛花此接口的参数名称,复制参数名称调用即可
 	 * @return App\Takeaways\Meituans\GetProducts
 	 */
-	public function getProducts(int $page = 1, int $pagesize = 10, int $platform_id){
+	public function getProducts(int $page = 1, int $pagesize = 10){
 		$this->method 	= (new \App\Takeaways\Meituans\GetProducts())
 				->page($page)
 				->pageSize($pagesize);
@@ -40,7 +46,7 @@ class Meituan implements Factory{
         if(!$data){
             return '产品数据解析失败! ' . $content;
         }
-        if(!Product::saveProduct($data, $this, $platform_id)){
+        if(!Product::saveProduct($data, $this, $store->platform->id)){
             return implode("\r\n", $this->errs());
         }
         if(isset($data['code']) && $data['code'] == 0){
@@ -63,12 +69,12 @@ class Meituan implements Factory{
 	 * 修改sku库存
 	 * @return App\Takeaways\Meituans\ChangeStock
 	 */
-	public function changeStock(int $stock, $storeid = null, $skuid = null, $spuid = null, $upc = null, $customer_sku_id = null){
+	public function changeStock(int $stock, ProductSku $productSku){
 		$this->method 	= (new \App\Takeaways\Meituans\ChangeStock())
-				->storeId($storeid)
-				->spuId($spuid)
-				->skuStocks_0_skuId($skuid)
-				->skuStocks_0_stock($stock);
+				->storeId($this->store->store_id)
+				->spuId($productSku->spu_id)
+				->skuStocks__0__skuId($productSku->sku_id)
+				->skuStocks__0__stock($stock);
 		return $this();
 	}
 
@@ -108,7 +114,6 @@ class Meituan implements Factory{
 			'User-Agent'    => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36',
 		];
 		$url 		= $this->domain . ltrim($this->method->uri, '/');
-		// dd($this->method->args);
 		if($this->method->method == 'get'){
 			$resp 	= $q->get($url, $this->method->args, ['headers' -> $headers]);
 		}else{
@@ -122,9 +127,9 @@ class Meituan implements Factory{
 	 * @param $data 	平台返回的商品列表
 	 * @return bool
 	 */
-	public function saveProducts(array $data, int $platform) :bool{
-		$this->method 	= new \App\Takeaways\Meituans\SaveProducts($data, $platform);
-		return $this->method->status();
+	public function saveProducts(array $data) :bool{
+		$this->method 	= new \App\Takeaways\Meituans\SaveProducts($data, $this->store->platform->id);
+		return $this->method->render();
 	}
 
 	/**
@@ -132,9 +137,9 @@ class Meituan implements Factory{
 	 * @param $data 	平台返回的商品列表
 	 * @return bool
 	 */
-	public function saveOrders(array $data, int $platform) :bool{
-		$this->method 	= new \App\Takeaways\Meituans\SaveOrders($data, $platform);
-		return $this->method->status();
+	public function saveOrders(array $data) :bool{
+		$this->method 	= new \App\Takeaways\Meituans\SaveOrders($data, $this->store->platform->id);
+		return $this->method->render();
 	}
 
 	public function errs(){

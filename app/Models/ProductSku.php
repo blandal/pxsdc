@@ -23,7 +23,7 @@ class ProductSku extends Model{
                 $this->pltobjs[$this->platform_id][$this->storeId]  = $tmp;
             }
 
-            $str   = $this->pltobjs[$this->platform_id][$this->storeId]->changeStock($val, $this->storeId, $this->sku_id, $this->spu_id);
+            $str   = $this->pltobjs[$this->platform_id][$this->storeId]->changeStock($val, $this);
             $cont   = json_decode($str, true);
             if(!$cont){
                 throw new \Exception('返回失败: ' . $str, 1);
@@ -35,5 +35,23 @@ class ProductSku extends Model{
             }
             $this->attributes['stocks']     = $val;
         }
+    }
+
+    /**
+     * 通过upc查找相同的商品
+     */
+    public static function sameByUpc($upc){
+        if(is_array($upc)){
+            return self::whereIn('upc', $upc)->get();
+        }
+        return self::where('upc', $upc)->get();
+    }
+
+    /**
+     * 根据商品名称和属性名称查找商品
+     * @param $name 参数需使用商品标题和规格名称的拼接
+     */
+    public static function sameByName($title, $guige){
+        return self::where('title', $title)->where('spec', $guige)->get();
     }
 }

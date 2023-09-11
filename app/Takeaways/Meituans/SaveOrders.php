@@ -44,9 +44,13 @@ class SaveOrders extends Meituan{
 				continue;
 			}
 			$item['oob']		= null;
-			if(isset($this->platformObj[$item['platform_id']])){
-				$item['oob'] 	= new $this->platformObj[$item['platform_id']]($item['cookie']);
+			$oob 	= Store::getInstance($item['store_id'], $item['platform_id']);
+			if($oob){
+				$item['oob']	= $oob;
 			}
+			// if(isset($this->platformObj[$item['platform_id']])){
+			// 	$item['oob'] 	= new $this->platformObj[$item['platform_id']]($item['cookie']);
+			// }
 			$this->stores[$item['store_id']]	= $item;
 		}
 
@@ -62,7 +66,7 @@ class SaveOrders extends Meituan{
 		}
 	}
 
-	public function status(){
+	public function render(){
 		if($this->status === true){
 			DB::transaction(function () {
 				Order::insert($this->addOrder);
@@ -102,6 +106,7 @@ class SaveOrders extends Meituan{
 					'createTime'		=> $createTime,
 					'orderId_tm'		=> $row['orderId'],
 					'platform_id'		=> $this->platform,
+					'addtime'			=> time(),
 				];
 				if(isset($this->stores[$store_id])){
 					$orderProducts 		= json_decode($this->stores[$store_id]['oob']->orderProducts($orderid), true);

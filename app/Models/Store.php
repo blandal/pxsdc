@@ -9,6 +9,7 @@ use App\Models\Platform;
 
 class Store extends Model{
     use HasFactory;
+    public $timestamps      = false;
     /**
      * 获取数据库中 第三方 的 店铺id和名称的二维数组列表
      * @param $platform     所属平台
@@ -29,15 +30,15 @@ class Store extends Model{
     public static function getInstance($store_id, $platform_id){
         $res    = self::where('platform_id', $platform_id)->where('store_id', $store_id)->first();
         if(!$res){
-            return '找不到店铺!';
+            throw new \Exception("找不到店铺!", 1);
         }
         if(!$res->cookie){
-            return '店铺还未登录!';
+            throw new \Exception("店铺还未登录!", 1);
         }
         if(!$res->platform){
-            return '平台不存在!';
+            throw new \Exception("平台不存在!", 1);
         }
-        return new $res->platform->object($res->cookie);
+        return new $res->platform->object($res);
     }
 
     /**

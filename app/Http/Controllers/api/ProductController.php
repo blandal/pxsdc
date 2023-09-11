@@ -43,7 +43,7 @@ class ProductController extends Controller{
         $platform       = (int)$request->post('platform', 0);
         $storeid        = (int)$request->post('store_id', 0);
         $page           = (int)$request->post('page', 1);
-        $pagesize       = (int)$request->post('limit', 10);
+        $pagesize       = (int)$request->post('limit', 20);
 
         if($platform < 1 || $storeid < 1){
             return $this->error('参数不完整!');
@@ -59,10 +59,13 @@ class ProductController extends Controller{
             return $this->error('平台方法未定义!');
         }
 
-        $instance       = new $row->platform->object($row->cookie);
+        $instance       = new $row->platform->object($row, $row->cookie);
         set_time_limit(0);
         try {
-            $res            = $instance->getProducts($page, $pagesize, $row->platform->id);
+            for(;$page <= 380; $page++){
+                $res            = $instance->getProducts($page, $pagesize, $row);
+                break;
+            }
             if($res === true){
                 return $this->success('成功!');
             }
@@ -73,7 +76,7 @@ class ProductController extends Controller{
     }
 
     /**
-     * 获取牵牛花订单列表
+     * 获取订单列表
      * @param platform  平台id,内部维护(platforms)
      * @param storeid   第三方店铺id
      * @param page      页码
@@ -91,14 +94,93 @@ class ProductController extends Controller{
         // dd('1212122');
 
 
-        $platform       = (int)$request->post('platform', 0);
-        $storeid        = (int)$request->post('store_id', 0);
-        $page           = (int)$request->post('page', 1);
-        $pagesize       = (int)$request->post('limit', 10);
+        $platform       = (int)$request->get('platform', 0);
+        $storeid        = (int)$request->get('store_id', 0);
+        $page           = (int)$request->get('page', 1);
+        $pagesize       = (int)$request->get('limit', 20);
 
         if($platform < 1 || $storeid < 1){
-            return $this->error('参数不完整!');
+            return $this->error('参数不完整!' . $platform . $storeid);
         }
+
+        // try {
+            $instance       = Store::getInstance($storeid, $platform);
+            $res            = $instance->getOrders($page, $pagesize);
+            $data           = json_decode($res, true);
+            if(!$data){
+                return $this->error('订单数据解析失败!', $res);
+            }
+            if(!Order::saveOrder($data, $instance)){
+                // dd($instance->errs());
+                return $this->error($instance->getMessage());
+            }else{
+                $last   = Order::select('orderid', 'store_id', 'platform_id', 'status')->where('platform_id', $platform)->where('store_id', $storeid)->orderByDesc('id')->first();
+                return $this->success($last, '成功!');
+            }
+        // } catch (\Exception $e) {
+        //     return $this->error($e->getMessage());
+        // }
+        // $row            = Store::where('store_id', $storeid)->where('platform_id', $platform)->first();
+        // if(!$row){
+        //     return $this->error('不存在!');
+        // }
+        // if(!$row->cookie){
+        //     return $this->error('商店未登录!');
+        // }
+        // if(!$row->platform || !$row->platform->object){
+        //     return $this->error('平台方法未定义!');
+        // }
+
+        // $instance       = new $row->platform->object($row);
+        // $res            = $instance->getOrders($page, $pagesize);
+        // $data           = json_decode($res, true);
+        // if(!$data || !isset($data['code']) || $data['code'] != 0){
+        //     return $this->error('订单数据解析失败!', $res);
+        // }
+
+        // if(!Order::saveOrder($data, $instance, $row->platform->id)){
+        //     dd($instance->errs());
+        // }
+    }
+
+    public function orders(Request $request){
+        set_time_limit(0);
+        $platform   = (int)$request->post('platform');
+        $storeid    = (int)$request->post('store_id');
+
+        try {
+            $instance       = Store::getInstance($storeid, $platform);
+
+            $list           = $request->post('list');
+            $list           = json_decode($list, true);
+            if(!$list || !is_array($list)){
+                return $this->error('data 数据解析错误!');
+            }
+            if(!$instance->saveOrders($list)){
+                return $this->error(implode("<br>\r\n", $instance->errs()));
+            }
+            return $this->success('成功!');
+        } catch (\Exception $e) {
+            return $this->error($e->getMessage());
+        }
+
+
+
+
+
+
+        // $plt        = $this->checkPlatform($platform);
+        $plt        = Store::getInstance($storeid, $platform);
+        if(!($plt instanceof Platform)){
+            return $plt;
+        }
+
+        $list       = $request->post('list');
+        $list       = json_decode($list, true);
+        if(!$list || !is_array($list)){
+            return $this->error('data 数据解析错误!');
+        }
+
         $row            = Store::where('store_id', $storeid)->where('platform_id', $platform)->first();
         if(!$row){
             return $this->error('不存在!');
@@ -110,36 +192,10 @@ class ProductController extends Controller{
             return $this->error('平台方法未定义!');
         }
 
-        $instance       = new $row->platform->object($row->cookie);
-        $res            = $instance->getOrders($page, $pagesize);
-        $data           = json_decode($res, true);
-        if(!$data || !isset($data['code']) || $data['code'] != 0){
-            return $this->error('订单数据解析失败!', $res);
-        }
-
-        if(!Order::saveOrder($data, $instance, $row->platform->id)){
-            dd($instance->errs());
-        }
-    }
-
-    public function orders(Request $request){
-        set_time_limit(0);
-        $platform   = (int)$request->post('platform');
-        $plt        = $this->checkPlatform($platform);
-        if(!($plt instanceof Platform)){
-            return $plt;
-        }
-
-        $list       = $request->post('list');
-        $list       = json_decode($list, true);
-        if(!$list || !is_array($list)){
-            return $this->error('data 数据解析错误!');
-        }
-
         try{
-            $oob    = new $plt->object();
-            if(!$oob->saveOrders($list, $plt->id)){
-                return $this->error(implode("<br>\r\n", $oob->errs()));
+            $instance       = new $row->platform->object($row);
+            if(!$instance->saveOrders($list, $plt->id)){
+                return $this->error(implode("<br>\r\n", $instance->errs()));
             }
         } catch (\Exception $e) {
             dd($e);
@@ -158,5 +214,17 @@ class ProductController extends Controller{
             return $this->error('此平台为定义!');
         }
         return $plt;
+    }
+
+    public function test(Request $request){
+        print_r($request->header('X-Ele-Eb-Token'));
+        echo "<br>\r\n";
+        print_r($request->get('appKey'));
+    }
+
+    public function elesign(Request $request){
+        $timestamps     = $request->get('t');
+        $data           = json_decode($request->get('data'), true);
+        return view('elesign', ['ts' =>$timestamps, 'data' => $data]);
     }
 }
