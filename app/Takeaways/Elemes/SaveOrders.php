@@ -28,8 +28,8 @@ class SaveOrders extends Eleme{
 		$orderIds 		= $this->getOrderIds();
 		$this->dbOrders = Order::whereIn('orderid', $orderIds)
 							->where('platform_id', $store->platform->id)
-							->where('store_id', $store->id)->pluck('id', 'orderid')->toArray();
-
+							->where('store_id', $store->store_id)->pluck('id', 'orderid')->toArray();
+// dd($orderIds, $this->dbOrders);
 		// dd($this->dbOrders, $data);
 		// $tmps 				= Order::whereIn('orderid', $orderIds)->where('platform_id', $platform)->get();
 		// foreach($tmps as $item){
