@@ -20,9 +20,10 @@ class SaveProducts{
 	private $addBases 	= [];
 	private $addSpus 	= [];
 	private $addSkus 	= [];
-	public function __construct(array $data, int $platform){
-		$this->platform 	= $platform;
-		$this->stores 		= Store::getStoreId2Name($platform);
+	public function __construct(array $data, $store){
+		$this->store 		= $store;
+		$this->platform 	= $store->platform->id;
+		$this->stores 		= Store::getStoreId2Name($this->platform);
 		$this->dbstore 		= $this->stores;
 		// dd($data);
 		if(!isset($data[0])){

@@ -285,7 +285,7 @@ class Eleme implements Factory{
 		$this->args['appKey']	= 12574478;
 		$this->args['t']		= $ts;
 		$signStr 				= "$this->token&$ts&$appkey&$data";
-		$this->args['sign']		= $this->command($signStr);
+		$this->args['sign']		= md5($signStr);//$this->command($signStr);
 
 		$this->args['api']		= $uri ? $uri : ($this->method->uri ?? null);
 		$this->args['v']		= $this->version;
