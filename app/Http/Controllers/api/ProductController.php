@@ -112,7 +112,7 @@ class ProductController extends Controller{
             }
             if(!Order::saveOrder($data, $instance)){
                 // dd($instance->errs());
-                return $this->error($instance->getMessage());
+                return $this->error($instance->errs());
             }else{
                 $last   = Order::select('orderid', 'store_id', 'platform_id', 'status')->where('platform_id', $platform)->where('store_id', $storeid)->orderByDesc('id')->first();
                 return $this->success($last, '成功!');
