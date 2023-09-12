@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Admin\Controllers\Sdc;
+namespace App\Admin\Controllers;
 
 use App\Models\ProductSku;
 use App\Models\Platform;
@@ -10,15 +10,16 @@ use Encore\Admin\Controllers\AdminController;
 use Encore\Admin\Form;
 use Encore\Admin\Grid;
 use Encore\Admin\Show;
+use App\Admin\Actions\Sku\BatchBind;
 
-class ProductController extends AdminController
+class BindSkuController extends AdminController
 {
     /**
      * Title for current resource.
      *
      * @var string
      */
-    protected $title = '商品 sku';
+    protected $title = 'SKU绑定';
 
     /**
      * Make a grid builder.
@@ -28,8 +29,7 @@ class ProductController extends AdminController
     protected function grid()
     {
         $grid = new Grid(new ProductSku());
-        $grid->model()->orderByDesc('title');
-        // $grid->model()->select('products.image', 'product_skus.*')->leftJoin('products', 'product_skus.product_id', '=', 'products.id');
+        $grid->model()->whereRaw('(bind is null or bind = "")')->orderByDesc('title');
         $platforms  = Platform::pluck('name', 'id')->toArray();
         $stores     = Store::pluck('title', 'store_id')->toArray();
 
@@ -42,22 +42,24 @@ class ProductController extends AdminController
             return '';
         })->image(60, 60);
         $grid->column('product_id', __('Product id'))->hide();
-        $grid->column('platform_id', __('平台'))->using($platforms)->filter();
-        $grid->column('storeId', __('店铺'))->using($stores);
+        $grid->column('platform_id', __('平台'))->using($platforms)->filter($platforms);
+        $grid->column('storeId', __('店铺'))->using($stores)->filter($stores);
         $grid->column('title', __('标题'))->filter('like');
         $grid->column('spec', __('规格'));
         $grid->column('sale_price', __('价格'))->hide();
         $grid->column('purchase_price', __('成本'))->hide();
         $grid->column('stocks', __('库存'))->sortable()->editable();
-        $grid->column('spu_id', __('Spu'));
-        $grid->column('sku_id', __('Sku'));
-        $grid->column('upc', __('upc'));
+        $grid->column('spu_id', __('Spu'))->hide();
+        $grid->column('sku_id', __('Sku'))->hide();
+        $grid->column('upc', __('upc'))->filter('like');
         $grid->column('customSkuId', __('自有id'))->hide();
         $grid->column('weight', __('Weight'))->hide();
         $grid->column('unit', __('Unit'))->hide();
         $grid->column('product_id_platform', __('Product id platform'))->hide();
 
-
+        $grid->batchActions(function ($batch) {
+            $batch->add(new BatchBind());
+        });
         return $grid;
     }
 
@@ -87,6 +89,18 @@ class ProductController extends AdminController
         $show->field('unit', __('Unit'));
         $show->field('customSkuId', __('CustomSkuId'));
         $show->field('product_id_platform', __('Product id platform'));
+        $show->field('itemId', __('ItemId'));
+        $show->field('isWeight', __('IsWeight'));
+        $show->field('weightType', __('WeightType'));
+        $show->field('productId', __('ProductId'));
+        $show->field('itemSkuId', __('ItemSkuId'));
+        $show->field('propId', __('PropId'));
+        $show->field('propText', __('PropText'));
+        $show->field('many', __('Many'));
+        $show->field('params', __('Params'));
+        $show->field('links', __('Links'));
+        $show->field('bind', __('Bind'));
+        $show->field('byhum', __('Byhum'));
 
         return $show;
     }
@@ -110,26 +124,24 @@ class ProductController extends AdminController
         $form->text('title', __('Title'));
         $form->text('spec', __('Spec'));
         $form->decimal('sale_price', __('Sale price'));
-        $form->decimal('purchase_price', __('Purchase price'))->default(0.00);
+        $form->decimal('purchase_price', __('Purchase price'))->default(0.0000);
         $form->decimal('stocks', __('Stocks'));
         $form->text('unit', __('Unit'));
         $form->text('customSkuId', __('CustomSkuId'));
         $form->text('product_id_platform', __('Product id platform'));
+        $form->text('itemId', __('ItemId'));
+        $form->switch('isWeight', __('IsWeight'));
+        $form->text('weightType', __('WeightType'));
+        $form->text('productId', __('ProductId'));
+        $form->text('itemSkuId', __('ItemSkuId'));
+        $form->text('propId', __('PropId'));
+        $form->text('propText', __('PropText'));
+        $form->switch('many', __('Many'));
+        $form->textarea('params', __('Params'));
+        $form->textarea('links', __('Links'));
+        $form->textarea('bind', __('Bind'));
+        $form->switch('byhum', __('Byhum'));
 
         return $form;
-    }
-
-    // 根据upc 自动绑定不同平台商品
-    public function autoBind(){
-        set_time_limit(0);
-        $res        = ProductSku::whereRaw('upc is not null')->where('product_id', '>', 0)->pluck('product_id', 'upc')->toArray();
-        foreach($res as $upc => $product_id){
-            $row    = ProductSku::where('product_id', 0)->where('upc', $upc)->get();
-            foreach($row as $item){
-                $item->product_id  = $product_id;
-                $item->save();
-            }
-        }
-        return $this->success(null, '成功');
     }
 }

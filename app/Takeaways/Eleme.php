@@ -111,6 +111,56 @@ class Eleme implements Factory{
 	 * @return response string
 	 */
 	public function changeStock(int $stock, ProductSku $productSku){
+		// dd($stock);
+		$this->method 		= new \App\Takeaways\Elemes\ChangeStock();
+		if($productSku->many == 1){
+			$skus 			= ProductSku::where('itemId', $productSku->itemId)->get();
+			$this->method->itemEditDTO__itemId($productSku->itemId);
+			$this->method->itemEditDTO__fromChannel('ITEM_EDIT');
+			$this->method->itemEditDTO__sellerId($this->store->sellerId);
+			$this->method->itemEditDTO__itemId($this->store->store_id);
+			$arr 			= [];
+			foreach($skus as $item){
+				$params 	= json_decode($item->params);
+				if(!$params){
+					return '商品信息错误!';
+				}
+				if($item->id == $productSku->id){
+					$params->quantity 			= $stock;
+					$productSku->params 		= json_encode($params);
+				}
+				$arr[]		= [
+					'barcode'		=> $params->barcode,
+					'itemSkuId'		=> $params->itemSkuId,
+					'itemWeight'	=> $params->itemWeight,
+					'price'			=> $params->price,
+					'productSkuId'	=> $params->productSkuId,
+					'quantity'		=> $item->id == $productSku->id ? $params->quantity : $item->stocks,
+					'salePropertyList'	=> $params->salePropertyList,
+					'skuOuterId'	=> $params->skuOuterId,
+				];
+			}
+			$this->method->itemEditDTO__itemSkuList(json_encode($arr));
+			$this->method->manyUpdate();
+		}else{
+			$this->method->sellerId($this->store->sellerId)
+							->itemId($productSku->itemId)
+							->storeId($this->store->store_id)
+							->isWeight($productSku->isWeight)
+							->weightType($productSku->weightType)
+							->quantity($stock);
+		}
+		$str 		= $this();
+		$str 		= json_decode($str, true);
+		dd($str);
+		if(isset($str['ret'][0]) && strpos($str['ret'][0], 'SUCCESS') !== false){
+			dd($str);
+			return true;
+		}else{
+			dd($str);
+		}
+		return '库存修改失败!';
+		// return $this();
 		// $this->method 	= (new \App\Takeaways\Elemes\ChangeStock())
 		// 		->sellerId($this->store->sellerId)
 		// 		->spuId($spuid)
@@ -157,39 +207,54 @@ class Eleme implements Factory{
 		$args 		= $this->args;
 		$url 		= $this->domain . trim($this->method->uri, '/') . '/' . $this->version . '/';
 
-// dd($headers, $url, $args);
+		if($this->method->method == 'post'){
+			$headers['Content-Type']	= 'application/x-www-form-urlencoded';
+		}
 		$client 	= new Client([
 			'verify'	=> false,
 			'headers'	=> $headers,
 		]);
-		$result 		= $client->get($url, ['query' => $args]);
-		$respCookies 	= $result->getHeader('set-cookie');
-		if(!empty($respCookies)){
-			$cookietmp 	= [];
-			foreach($this->cookie as $item){
-				$tmp 	= explode('=', $item);
-				$cookietmp[trim($tmp[0])] 	= $tmp[1];
-			}
-			foreach($respCookies as $item){
-				$tmp 	= explode(';', trim($item));
-				$item 	= $tmp[0];
-				$tmp 	= explode('=', $item);
-				$cookietmp[trim($tmp[0])]	= trim($tmp[1]);
-			}
-			$cooikeArr 			= [];
-			foreach($cookietmp as $k => $item){
-				if($k == '_m_h5_tk'){
-					$tts 			= explode('_', $item);
-					$this->token 	= $tts[0];
-					$this->tokenTimout 	= (int)($tts[1] / 1000);
-				}
-				$cooikeArr[] 	= "$k=$item";
-			}
-			$this->cookie 		= $cooikeArr;
-			$this->store->cookie 		= implode(';', $this->cookie);
-			$this->store->save();
-			$this->headers['Cookie']	= $this->store->cookie;
+
+		if($this->method->method == 'get'){
+			$result 		= $client->get($url, ['query' => $args]);
+		}else{
+			$data 			= $args['data'];
+			unset($args['data']);
+			// dd($args, $url, ['data' => $data], $headers);
+			$result 		= $client->post($url, ['query' => $args, 'form_params' => ['data' => $data]]);
 		}
+
+		// $result 		= $client->get($url, ['query' => $args]);
+		try {
+			$respCookies 	= $result->getHeaderer('set-cookie');
+			if(!empty($respCookies)){
+				$cookietmp 	= [];
+				foreach($this->cookie as $item){
+					$tmp 	= explode('=', $item);
+					$cookietmp[trim($tmp[0])] 	= $tmp[1];
+				}
+				foreach($respCookies as $item){
+					$tmp 	= explode(';', trim($item));
+					$item 	= $tmp[0];
+					$tmp 	= explode('=', $item);
+					$cookietmp[trim($tmp[0])]	= trim($tmp[1]);
+				}
+				$cooikeArr 			= [];
+				foreach($cookietmp as $k => $item){
+					if($k == '_m_h5_tk'){
+						$tts 			= explode('_', $item);
+						$this->token 	= $tts[0];
+						$this->tokenTimout 	= (int)($tts[1] / 1000);
+					}
+					$cooikeArr[] 	= "$k=$item";
+				}
+				$this->cookie 		= $cooikeArr;
+				$this->store->cookie 		= implode(';', $this->cookie);
+				$this->store->save();
+				$this->headers['Cookie']	= $this->store->cookie;
+			}
+		} catch (\Exception $e) {}
+		
 		return $result->getBody()->getContents();
 		dd($result->getBody()->getContents());
 // cna=eH15HR52OU4CATs4lCf1Qf6E; WMUSS=MWYZYZMTAwMDIwMDI1ODA0MzEyT2lBOXlWQjNQ; SWITCH_SHOP=; WMSTOKEN=MWYZYZMTAwMDIwMDI1ODA0MzEyT2lBOXlWQjNQ; OUTER_AUTH_LOGIN=MWYZYZMTAwMDIwMDI1ODA0MzEyT2lBOXlWQjNQ%3BMWYZYZMTAwMDIwMDI1ODA0MzEyT2lBOXlWQjNQ; xlly_s=1; _m_h5_tk=4eae4153ca19b7606d417c040fd8d3b3_1694403492958; _m_h5_tk_enc=36cf5530f1d7895304a8b293984da617; l=fBMkwck7Nvs9yv9fBO5Clurza77T1IOb4sPzaNbMiIEGB6Y74Fp9XY-Q2O8o8q-5WhQNF659R3-WjmOpBeYBqCXUBYDeDTxk1CMmnmOk-Wf..; tfstk=dnGkzF1BkYy7ET2dJTFWZBj4Qevvr7NaTHoLvk3UYzqb4JeK86YnXoe-e78W-6mxj3wLpQwhKcHbJYEpFBY30cYBV3N-tXmqDbrz93i0YVibJYKzwXcn0cu-x2T78koExkHJHC3SPWNeXDA9646MoW-9qvpY74NQThQATddiPc_AJmsGA1snN3GXrREGJnu1E01lsag8m65G5z2Pg4BdT6l0r8cErOuG3OP_V6a2JjWCd8zbolEgVMVV.; isg=BCkp6zB3aaaNXVUVhytypYteONWD9h0oH-RPF8sfzZBDkkmkE0RL-DyMVDakCrVg
@@ -285,11 +350,13 @@ class Eleme implements Factory{
 		$this->args['appKey']	= 12574478;
 		$this->args['t']		= $ts;
 		$signStr 				= "$this->token&$ts&$appkey&$data";
-		$this->args['sign']		= md5($signStr);//$this->command($signStr);
-
+		$this->args['sign']		= md5($signStr);//$this->command($signStr);//
 		$this->args['api']		= $uri ? $uri : ($this->method->uri ?? null);
 		$this->args['v']		= $this->version;
 		$this->args['data']		= $data;
+		// if($this->method->method == 'get'){
+		// 	$this->args['data']		= $data;
+		// }
 		return true;
 	}
 

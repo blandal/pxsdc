@@ -10,6 +10,7 @@ use App\Models\Store;
 use App\Models\Order;
 use App\Models\ProductSku;
 use App\Models\Product;
+use App\Models\ProductSkuBind;
 
 class ProductController extends Controller{
     public function index(Request $request){
@@ -40,6 +41,12 @@ class ProductController extends Controller{
      * 获取商品列表
      */
     public function getindex(Request $request){
+        dd(ProductSku::bind());
+        // $row    = ProductSku::find(22023);
+        // $row->stocks    = 2;
+        // $row->save();
+        // dd('----');
+
         $platform       = (int)$request->post('platform', 0);
         $storeid        = (int)$request->post('store_id', 0);
         $page           = (int)$request->post('page', 1);
@@ -227,5 +234,40 @@ class ProductController extends Controller{
         $timestamps     = $request->get('t');
         $data           = json_decode($request->get('data'), true);
         return view('elesign', ['ts' =>$timestamps, 'data' => $data]);
+    }
+
+    public function skuautolink(){
+        set_time_limit(0);
+        $res    = ProductSku::select('upc', 'id', 'product_id', 'platform_id')->whereRaw('upc is not null')->get()->toArray();
+        $upcs   = [];
+        // $skuids     = array_column($res, 'id');
+
+        // $binded    = ProductSkuBind::whereIn('sku_table_id', $skuids)->pluck('product_id', 'sku_table_id')->toArray();
+        foreach($res as $item){
+            $upcs[$item['upc']][]     = $item;
+        }
+        $binds      = [];
+        foreach($upcs as $upc => $item){
+            if(count($item) > 1){
+                $product_ids    = array_column($item, 'product_id');
+                $tmp            = array_flip($product_ids);
+                if(count($tmp) > 1){
+                    $min        = min($product_ids);
+                    ProductSku::where('upc', (string)$upc)->update(['product_id' => $min]);
+                }
+
+
+
+                $skuids         = array_flip(array_column($item, 'id'));
+                foreach($item as $zv){
+                    $tmp        = $skuids;
+                    unset($tmp[$zv['id']]);
+                    $r          = ProductSku::find($zv['id']);
+                    $r->bind    = implode(',', array_keys($tmp));
+                    $r->save();
+                }
+            }
+        }
+        dd($upcs);
     }
 }

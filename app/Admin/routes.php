@@ -12,5 +12,7 @@ Route::group([
 ], function (Router $router) {
 
     $router->get('/', 'HomeController@index')->name('home');
-    $router->resource('sdc/products', Sdc\ProductController::class);;
+    $router->resource('sdc/productsku', Sdc\ProductController::class);
+    $router->resource('sdc/products', Sdc\ProductsController::class);
+    $router->resource('product-skus', BindSkuController::class);
 });

@@ -23,15 +23,18 @@ class ProductSku extends Model{
                 $this->pltobjs[$this->platform_id][$this->storeId]  = $tmp;
             }
 
-            $str   = $this->pltobjs[$this->platform_id][$this->storeId]->changeStock($val, $this);
-            $cont   = json_decode($str, true);
-            if(!$cont){
-                throw new \Exception('返回失败: ' . $str, 1);
-            }elseif(!isset($cont['code'])){
-                throw new \Exception('返回格式错误: ' . $str, 1);
-            }elseif($cont['code'] != 0){
-                $msg    = $cont['msg'] ?? '!!请求失败!';
-                throw new \Exception($msg, 1);
+            $issuccess   = $this->pltobjs[$this->platform_id][$this->storeId]->changeStock($val, $this);
+            // $cont  = json_decode($str, true);
+            // if(!$cont){
+            //     throw new \Exception('返回失败: ' . $str, 1);
+            // }elseif(!isset($cont['code'])){
+            //     throw new \Exception('返回格式错误: ' . $str, 1);
+            // }elseif($cont['code'] != 0){
+            //     $msg    = $cont['msg'] ?? '!!请求失败!';
+            //     throw new \Exception($msg, 1);
+            // }
+            if($issuccess !== true){
+                throw new \Exception($issuccess, 1);
             }
             $this->attributes['stocks']     = $val;
         }
@@ -53,5 +56,50 @@ class ProductSku extends Model{
      */
     public static function sameByName($title, $guige){
         return self::where('title', $title)->where('spec', $guige)->get();
+    }
+
+    /**
+     * 自动绑定upc
+     */
+    public static function bind(){
+        set_time_limit(0);
+        $res    = self::select('upc', 'id', 'product_id', 'platform_id', 'storeId', 'byhum')->whereRaw('upc is not null')->get()->toArray();
+        $upcs   = [];
+        foreach($res as $item){
+            $upcs[$item['upc']][]     = $item;
+        }
+        $binds      = [];
+        foreach($upcs as $upc => $item){
+            if(count($item) > 1){
+                $product_ids    = array_column($item, 'product_id');
+                $tmp            = array_flip($product_ids);
+                if(count($tmp) > 1){
+                    $min        = min($product_ids);
+                    self::where('upc', (string)$upc)->update(['product_id' => $min]);
+                }
+
+
+                foreach($item as $zv){
+                    $zvBindIds  = [];
+                    foreach($item as $val){
+                        if($val['id'] == $zv['id']){
+                            continue;
+                        }
+                        if($zv['byhum'] == 1){
+                            continue;
+                        }
+                        if($val['storeId'] != $zv['storeId']){
+                            $zvBindIds[]    = $val['id'];
+                        }
+                    }
+                    if(!empty($zvBindIds)){
+                        $r          = self::find($zv['id']);
+                        $r->bind    = implode(',', $zvBindIds);
+                        $r->save();
+                    }
+                }
+            }
+        }
+        return true;
     }
 }

@@ -18,8 +18,11 @@ class SaveProducts{
 	private $stores 	= [];
 	private $addStores 	= [];
 	private $addBases 	= [];
+	private $dbSpus 	= [];
 	private $addSpus 	= [];
 	private $addSkus 	= [];
+	private $upcTable 	= [];
+	private $skusTable	= [];
 	public function __construct(array $data, Store $store){
 		$this->store 		= $store;
 		$this->platform 	= $store->platform->id;
@@ -31,6 +34,33 @@ class SaveProducts{
 			}
 			$data 	= $data['data']['list'];
 		}
+
+		//解析出spu
+		$spus 			= array_column($data, 'spuId');
+		$this->dbSpus 	= ProductSpu::whereIn('spu_id', $spus)->pluck('product_id', 'spu_id')->toArray();
+
+
+		//解析出所有的upc
+		$upcs 		= [];
+		$skus 		= [];
+		foreach($data as $item){
+			foreach($item['storeSkuList'] as $val){
+				if($val['upc']){
+					$upcs[] 	= $val['upc'];
+				}
+				if($val['skuId']){
+					$skus[] 	= $val['skuId'];
+				}
+			}
+		}
+		if(!empty($upcs)){
+			$this->upcTable 	= ProductSku::whereIn('upc', $upcs)->pluck('product_id', 'upc')->toArray();
+		}
+
+		//解析出skus
+		$this->skusTable		= ProductSku::whereIn('sku_id', $skus)->pluck('product_id', 'sku_id')->toArray();
+
+
 		try {
 			foreach($data as $item){
 				$this->fmtrow($item);
@@ -45,42 +75,53 @@ class SaveProducts{
 
 	public function render(){
 		if($this->status === true){
-			$addstore 	= array_diff_key($this->addStores, $this->dbstore);
-			if(!empty($addstore)){
-				Store::insert($addstore);
-			}
-
-			$spus 			= array_keys($this->addBases);
-			$skus 			= array_keys($this->addSkus);
-			$dbProducts 	= Product::whereIn('spu', $spus)->pluck('id', 'spu')->toArray();
-			$diff 			= array_diff_key($this->addBases, $dbProducts);
-			if(!empty($diff)){
-				Product::insert($diff);
-				$dbProducts 	= Product::whereIn('spu', $spus)->pluck('id', 'spu')->toArray();
-			}
-
-			$dbSpus 	= ProductSpu::where('platform_id', $this->platform)->whereIn('spu_id', $spus)->pluck('product_id', 'spu_id')->toArray();
-			$diff 		= array_diff_key($this->addSpus, $dbSpus);
-			if(!empty($diff)){
-				foreach($diff as &$item){
-					$item['product_id']		= $dbProducts[$item['spu_id']] ?? 0;
+			try {
+				if(!empty($this->addSpus)){
+					ProductSpu::insert($this->addSpus);
 				}
-				try {
-					ProductSpu::insert($diff);
-				} catch (\Exception $e) {
-					dd($e->getMessage(), $diff);
+				if(!empty($this->addSkus)){
+					ProductSku::insert($this->addSkus);
 				}
+			} catch (\Exception $e) {
+				dd($e->getMessage(), $this->addSpus, $this->skusTable, $this->addSkus);
 			}
+			
+			// $addstore 	= array_diff_key($this->addStores, $this->dbstore);
+			// if(!empty($addstore)){
+			// 	Store::insert($addstore);
+			// }
 
-			$dbSkus 	= ProductSku::where('platform_id', $this->platform)->whereIn('sku_id', $skus)->pluck('sku_id', 'sku_id')->toArray();
-			$diff 		= array_diff_key($this->addSkus, $dbSkus);
-			if(!empty($diff)){
-				foreach($diff as &$item){
-					$item['product_id']		= $dbProducts[$item['spu_id']] ?? 0;
-				}
-				// dd($this->addSkus, $diff, '-----');
-				ProductSku::insert($diff);
-			}
+			// $spus 			= array_keys($this->addBases);
+			// $skus 			= array_keys($this->addSkus);
+			// $dbProducts 	= Product::whereIn('spu', $spus)->pluck('id', 'spu')->toArray();
+			// $diff 			= array_diff_key($this->addBases, $dbProducts);
+			// if(!empty($diff)){
+			// 	Product::insert($diff);
+			// 	$dbProducts 	= Product::whereIn('spu', $spus)->pluck('id', 'spu')->toArray();
+			// }
+
+			// $dbSpus 	= ProductSpu::where('platform_id', $this->platform)->whereIn('spu_id', $spus)->pluck('product_id', 'spu_id')->toArray();
+			// $diff 		= array_diff_key($this->addSpus, $dbSpus);
+			// if(!empty($diff)){
+			// 	foreach($diff as &$item){
+			// 		$item['product_id']		= $dbProducts[$item['spu_id']] ?? 0;
+			// 	}
+			// 	try {
+			// 		ProductSpu::insert($diff);
+			// 	} catch (\Exception $e) {
+			// 		dd($e->getMessage(), $diff);
+			// 	}
+			// }
+
+			// $dbSkus 	= ProductSku::where('platform_id', $this->platform)->whereIn('sku_id', $skus)->pluck('sku_id', 'sku_id')->toArray();
+			// $diff 		= array_diff_key($this->addSkus, $dbSkus);
+			// if(!empty($diff)){
+			// 	foreach($diff as &$item){
+			// 		$item['product_id']		= $dbProducts[$item['spu_id']] ?? 0;
+			// 	}
+			// 	// dd($this->addSkus, $diff, '-----');
+			// 	ProductSku::insert($diff);
+			// }
 		}
 		return $this->status;
 	}
@@ -93,9 +134,67 @@ class SaveProducts{
 			return $this->seterr('产品 spu 和 name 不存在!');
 		}
 		$row['name']	= trim($row['name']);
-		$this->store($row);
-		$this->spu($row);
-		$this->sku($row);
+		$storeId 		= (int)$row['store']['poiId'];
+		$spu_id 	= $row['spuId'];
+		$image 		= $row['imageUris'][0];
+		$title 		= $row['name'];
+
+		$category 				= $row['category'] ?? null;
+		$standerTypeDesc 		= $row['standerTypeDesc'] ?? null;
+		$channelId 				= 0;
+		$frontCategoryNamePath 	= null;
+		$frontCategoryIdPath 	= null;
+		$customSpuId 			= null;
+
+		if(isset($row['channelSpu'])){
+			$channel 	= $row['channelSpu'];
+			$channelId 	= $channel['channelId'] ?? 0;
+			$frontCategoryNamePath 	= $channel['frontCategories'][0]['frontCategoryNamePath'] ?? null;
+			$frontCategoryIdPath 	= $channel['frontCategories'][0]['frontCategoryIdPath'] ?? null;
+			$customSpuId 			= $channel['customSpuId'] ?? null;
+		}
+
+		$product_id 	= 0;
+		$upc 			= array_column($row['storeSkuList'], 'upc');
+		foreach($upc as $u){
+			if(isset($this->upcTable[$u])){
+				$product_id 	= $this->upcTable[$u];
+			}
+		}
+		if($product_id < 1){
+			$product 	= new Product;
+			$product->image 	= $image;
+			$product->title 	= $title;
+			$product->spu 		= $spu_id;
+			$product->save();
+			$product_id 		= $product->id;
+		}
+		if($product_id < 1){
+			return $this->seterr('空的!');
+		}
+
+		if(!isset($this->dbSpus[$spu_id])){
+			$this->addSpus[$spu_id] 	= [
+				'product_id'		=> $product_id,
+				'platform_id'		=> $this->platform,
+				'title'				=> $title,
+				'spu_id'			=> $spu_id,
+				'store_id'			=> $storeId,
+				'category'			=> is_array($category) ? json_encode($category) : $category,
+				'channel_id'		=> $channelId,
+				'standerTypeDesc'	=> $standerTypeDesc,
+				'frontCategoryNamePath'	=> $frontCategoryNamePath,
+				'frontCategoryId'	=> $frontCategoryIdPath,
+				'status'			=> $row['channelSpu']['spuStatus'] ?? 0,
+				'customSpuId'		=> $customSpuId,
+				'images'			=> $image,
+			];
+		}
+
+
+		// $this->store($row);
+		// $this->spu($row);
+		$this->sku($row, $product_id);
 	}
 
 	/**
@@ -160,7 +259,7 @@ class SaveProducts{
 	/**
 	 * sku 信息
 	 */
-	private function sku($row){
+	private function sku($row, $product_id){
 		if(!isset($row['storeSkuList'], $row['channelSpu'])){
 			return false;
 		}
@@ -169,6 +268,9 @@ class SaveProducts{
 				return $this->seterr('不存在skuId字段!');
 			}
 			$sku_id 	= $item['skuId'];
+			if(isset($this->skusTable[$sku_id])){
+				continue;
+			}
 			$this->addSkus[$sku_id] 	= [
 				'platform_id'	=> $this->platform,
 				'spu_id'		=> $row['spuId'],
@@ -183,6 +285,7 @@ class SaveProducts{
 				'customSkuId'	=> null,
 				'storeId'		=> $item['storeId'],
 				'title'			=> $row['name'],
+				'product_id'	=> $product_id,
 			];
 		}
 		foreach($row['channelSpu']['channelSkuList'] as $item){

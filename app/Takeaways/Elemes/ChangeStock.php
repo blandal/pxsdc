@@ -11,29 +11,34 @@ class ChangeStock extends Eleme{
 	use BaseFactory;
 	protected $method 	= 'get';
 	protected $uri 		= 'mtop.ele.newretail.item.edit';//mtop.ele.newretail.item.update 是post请求,多个sku的情况下使用post
-	protected $args 	= [
-		'sellerId'			=> '',
-		'itemId'			=> '',
-		'storeId'			=> '',
-		'isWeight'			=> 'false',
-		'weightType'		=> null,
-		'quantity'			=> 0,
-	];
+	protected $args 	= [];
+	
+		// 'sellerId'			=> '',
+		// 'itemId'			=> '',
+		// 'storeId'			=> '',
+		// 'isWeight'			=> 'false',
+		// 'weightType'		=> null,
+		// 'quantity'			=> 0,
+	
 
-	public function check(){
-		if(!$this->args['storeId']){
-			return '请设置 storeId';
-		}
-		if(!$this->args['spuId']){
-			return '请设置 spuId';
-		}
-		// if(!isset($this->args['skuStocks']['skuId'], $this->args['skuStocks']['stock'], $this->args['skuStocks']['customizeStockFlag'])){
-		// 	return '不允许更改 skuStocks 参数结构!';
-		// }
-		// if(!$this->args['skuStocks']['skuId'] || !$this->args['skuStocks']['stock'] || !$this->args['skuStocks']['customizeStockFlag']){
-		// 	return '请确保 skuStocks参数下的: skuId, stock, customizeStockFlag 正确设置!';
-		// }
-		return true;
+	// public function check(){
+	// 	// if(!$this->args['storeId']){
+	// 	// 	return '请设置 storeId';
+	// 	// }
+	// 	// if(!$this->args['spuId']){
+	// 	// 	return '请设置 spuId';
+	// 	// }
+	// 	// if(!isset($this->args['skuStocks']['skuId'], $this->args['skuStocks']['stock'], $this->args['skuStocks']['customizeStockFlag'])){
+	// 	// 	return '不允许更改 skuStocks 参数结构!';
+	// 	// }
+	// 	// if(!$this->args['skuStocks']['skuId'] || !$this->args['skuStocks']['stock'] || !$this->args['skuStocks']['customizeStockFlag']){
+	// 	// 	return '请确保 skuStocks参数下的: skuId, stock, customizeStockFlag 正确设置!';
+	// 	// }
+	// 	return true;
+	// }
+	public function manyUpdate(){
+		$this->uri 		= 'mtop.ele.newretail.item.update';
+		$this->method 	= 'post';
 	}
 }
 
