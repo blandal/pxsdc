@@ -34,10 +34,14 @@ class ProductController extends AdminController
 
         $grid->column('id', __('Id'))->hide();
         $grid->column('image', __('图片'))->display(function(){
-            return Product::find($this->product_id)->image;
+            $rr     = Product::find($this->product_id);
+            if($rr){
+                return $rr->image;
+            }
+            return '';
         })->image(60, 60);
         $grid->column('product_id', __('Product id'))->hide();
-        $grid->column('platform_id', __('平台'))->using($platforms);
+        $grid->column('platform_id', __('平台'))->using($platforms)->filter();
         $grid->column('storeId', __('店铺'))->using($stores);
         $grid->column('title', __('标题'))->filter('like');
         $grid->column('spec', __('规格'));
@@ -46,7 +50,7 @@ class ProductController extends AdminController
         $grid->column('stocks', __('库存'))->sortable()->editable();
         $grid->column('spu_id', __('Spu'));
         $grid->column('sku_id', __('Sku'));
-        $grid->column('upc', __('Upc'))->hide();
+        $grid->column('upc', __('upc'));
         $grid->column('customSkuId', __('自有id'))->hide();
         $grid->column('weight', __('Weight'))->hide();
         $grid->column('unit', __('Unit'))->hide();

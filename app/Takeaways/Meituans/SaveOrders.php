@@ -19,8 +19,9 @@ class SaveOrders extends Meituan{
 	private $stores 	= [];
 	private $platformObj= [];
 	private $changeStatus 	= 25;
-	public function __construct(array $data, int $platform){
-		$this->platform 	= $platform;
+	public function __construct(array $data, Store $store){
+		$this->store 		= $store;
+		$this->platform 	= $store->platform->id;
 		if(!isset($data[0])){
 			if(!isset($data['data']['orderList'])){
 				return $this->seterr('传入数据格式错误,不是一个数组或者没有 data 的 key');
@@ -32,7 +33,7 @@ class SaveOrders extends Meituan{
 			$data 	= $data['orderList'];
 		}
 		$orderIds 			= array_column($data, 'channelOrderId');
-		$tmps 				= Order::whereIn('orderid', $orderIds)->where('platform_id', $platform)->get();
+		$tmps 				= Order::whereIn('orderid', $orderIds)->where('platform_id', $this->platform)->get();
 		foreach($tmps as $item){
 			$this->dbOrders[$item->orderid]	= $item;
 		}
