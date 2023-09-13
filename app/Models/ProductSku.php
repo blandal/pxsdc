@@ -37,10 +37,14 @@ class ProductSku extends Model{
             foreach($binds as $bindid){
                 $needchange  = self::find($bindid);
 
-                if($needchange && $needchange->store->getInstances()->changeStock($val, $needchange) == true){
-                    self::where('id', $bindid)->update(['stocks' => $val]);
+                if($needchange){
+                    $rsp    = $needchange->store->getInstances()->changeStock($val, $needchange);
+                    if($rsp == true){
+                        self::where('id', $bindid)->update(['stocks' => $val]);
+                    }else{
+                        throw new \Exception('更新失败!!!!', 1);
+                    }
                 }else{
-                    dd($needchange);
                     throw new \Exception('更新失败!!!!', 1);
                 }
             }

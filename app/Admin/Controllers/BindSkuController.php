@@ -48,7 +48,7 @@ class BindSkuController extends AdminController
         $grid->column('spec', __('规格'));
         $grid->column('sale_price', __('价格'))->hide();
         $grid->column('purchase_price', __('成本'))->hide();
-        $grid->column('stocks', __('库存'))->sortable()->editable();
+        $grid->column('stocks', __('库存'))->sortable();
         $grid->column('spu_id', __('Spu'))->hide();
         $grid->column('sku_id', __('Sku'))->hide();
         $grid->column('upc', __('upc'))->filter('like');

@@ -111,7 +111,6 @@ class Eleme implements Factory{
 	 * @return response string
 	 */
 	public function changeStock(int $stock, ProductSku $productSku){
-		// dd($stock);
 		$this->method 		= new \App\Takeaways\Elemes\ChangeStock();
 		if($productSku->many == 1){
 			$skus 			= ProductSku::where('itemId', $productSku->itemId)->get();
@@ -126,7 +125,7 @@ class Eleme implements Factory{
 					$params->quantity 			= $stock;
 					$productSku->params 		= json_encode($params, JSON_UNESCAPED_UNICODE);
 				}
-				$arr[]		= json_encode([
+				$strss 		= json_encode([
 					'barcode'		=> (string)$params->barcode,
 					'itemSkuId'		=> (int)$params->itemSkuId,
 					'itemWeight'	=> (int)$params->itemWeight,
@@ -136,6 +135,7 @@ class Eleme implements Factory{
 					'salePropertyList'	=> $params->salePropertyList,
 					'skuOuterId'	=> $params->skuOuterId,
 				], JSON_UNESCAPED_UNICODE);
+				$arr[]		= str_replace('\\/', '/', $strss);
 			}
 			$this->method->itemEditDTO__itemSkuList($arr);
 			$this->method->itemEditDTO__fromChannel('ITEM_EDIT');
@@ -156,7 +156,7 @@ class Eleme implements Factory{
 		if(isset($str['ret'][0]) && strpos($str['ret'][0], 'SUCCESS') !== false){
 			return true;
 		}
-		dd($str, '~~~~~~~~');
+		// dd($str, '~~~~~~~~');
 		return '库存修改失败!';
 	}
 
@@ -190,10 +190,13 @@ class Eleme implements Factory{
 			}
 		}
 
-		$headers 	= $this->headers;//array_merge($this->headers, [
-		//	'Cookie'    => implode(';', $this->cookie),
-		//]);
-		$this->sigin($this->method->args);
+		$headers 	= $this->headers;
+		$data 		= $this->method->args;
+		if(isset($data['itemEditDTO']['itemSkuList'])){
+	        $data['itemEditDTO']    = str_replace('\\/', '/', json_encode($data['itemEditDTO'], JSON_UNESCAPED_UNICODE));
+	        $data                   = str_replace('\\/', '/', json_encode($data, JSON_UNESCAPED_UNICODE));
+		}
+		$this->sigin($data);
 		$args 		= $this->args;
 		$url 		= $this->domain . trim($this->method->uri, '/') . '/' . $this->version . '/';
 
@@ -210,7 +213,7 @@ class Eleme implements Factory{
 		}else{
 			$data 			= $args['data'];
 			unset($args['data']);
-			dd($args, $url, ['data' => $data], $headers);
+			// dd($args, $url, ['data' => $data], $headers);
 			$result 		= $client->post($url, ['query' => $args, 'form_params' => ['data' => $data]]);
 		}
 		$respCookies 		= $result->getHeaders();

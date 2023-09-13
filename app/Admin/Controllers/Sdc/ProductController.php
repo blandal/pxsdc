@@ -116,6 +116,15 @@ class ProductController extends AdminController
         $form->text('customSkuId', __('CustomSkuId'));
         $form->text('product_id_platform', __('Product id platform'));
 
+        $form->saving(function (Form $form) {
+            if($form->stocks != $form->model()->stocks){
+                $resp   = $form->model()->store->getInstances()->changeStock($form->stocks, $form->model());
+                if($resp !== true){
+                    throw new \Exception('库存同步错误!');
+                }
+            }
+        });
+
         return $form;
     }
 
