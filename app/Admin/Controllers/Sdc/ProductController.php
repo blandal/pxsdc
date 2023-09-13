@@ -120,7 +120,7 @@ class ProductController extends AdminController
             if($form->stocks != $form->model()->stocks){
                 $resp   = $form->model()->store->getInstances()->changeStock($form->stocks, $form->model());
                 if($resp !== true){
-                    throw new \Exception('库存同步错误!');
+                    throw new \Exception('库存同步错误!' . $resp);
                 }
             }
         });
