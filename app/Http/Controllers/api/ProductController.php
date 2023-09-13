@@ -41,8 +41,8 @@ class ProductController extends Controller{
      * 获取商品列表
      */
     public function getindex(Request $request){
-        dd(ProductSku::bind());
-        // $row    = ProductSku::find(22023);
+        // dd(ProductSku::bind());
+        // $row    = ProductSku::find(9998);
         // $row->stocks    = 2;
         // $row->save();
         // dd('----');
@@ -148,66 +148,6 @@ class ProductController extends Controller{
         // if(!Order::saveOrder($data, $instance, $row->platform->id)){
         //     dd($instance->errs());
         // }
-    }
-
-    public function orders(Request $request){
-        set_time_limit(0);
-        $platform   = (int)$request->post('platform');
-        $storeid    = (int)$request->post('store_id');
-
-        try {
-            $instance       = Store::getInstance($storeid, $platform);
-
-            $list           = $request->post('list');
-            $list           = json_decode($list, true);
-            if(!$list || !is_array($list)){
-                return $this->error('data 数据解析错误!');
-            }
-            if(!$instance->saveOrders($list)){
-                return $this->error(implode("<br>\r\n", $instance->errs()));
-            }
-            $last   = Order::select('orderid', 'store_id', 'platform_id', 'status')->where('platform_id', $platform)->where('store_id', $storeid)->orderByDesc('id')->first();
-            return $this->success($last, '成功!');
-        } catch (\Exception $e) {
-            return $this->error($e->getMessage());
-        }
-
-
-
-
-
-
-        // $plt        = $this->checkPlatform($platform);
-        $plt        = Store::getInstance($storeid, $platform);
-        if(!($plt instanceof Platform)){
-            return $plt;
-        }
-
-        $list       = $request->post('list');
-        $list       = json_decode($list, true);
-        if(!$list || !is_array($list)){
-            return $this->error('data 数据解析错误!');
-        }
-
-        $row            = Store::where('store_id', $storeid)->where('platform_id', $platform)->first();
-        if(!$row){
-            return $this->error('不存在!');
-        }
-        if(!$row->cookie){
-            return $this->error('商店未登录!');
-        }
-        if(!$row->platform || !$row->platform->object){
-            return $this->error('平台方法未定义!');
-        }
-
-        try{
-            $instance       = new $row->platform->object($row);
-            if(!$instance->saveOrders($list, $plt->id)){
-                return $this->error(implode("<br>\r\n", $instance->errs()));
-            }
-        } catch (\Exception $e) {
-            dd($e);
-        }
     }
 
     private function checkPlatform(int $platform){

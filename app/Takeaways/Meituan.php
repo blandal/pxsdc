@@ -75,7 +75,12 @@ class Meituan implements Factory{
 				->spuId($productSku->spu_id)
 				->skuStocks__0__skuId($productSku->sku_id)
 				->skuStocks__0__stock($stock);
-		return $this();
+		$resp 	= $this();
+		$resp 	= json_decode($resp, true);
+		if(isset($resp['code']) && $resp['code'] == 0){
+			return true;
+		}
+		return false;
 	}
 
 	/**
@@ -115,7 +120,7 @@ class Meituan implements Factory{
 		];
 		$url 		= $this->domain . ltrim($this->method->uri, '/');
 		if($this->method->method == 'get'){
-			$resp 	= $q->get($url, $this->method->args, ['headers' -> $headers]);
+			$resp 	= $q->get($url, $this->method->args, ['headers' => $headers]);
 		}else{
 			$resp 	= $q->post($url, '', ['headers' => $headers, 'json' => $this->method->args]);
 		}
@@ -137,7 +142,7 @@ class Meituan implements Factory{
 	 * @param $data 	平台返回的商品列表
 	 * @return bool
 	 */
-	public function saveOrders(array $data) :bool{
+	public function saveOrders(array $data) :array{
 		$this->method 	= new \App\Takeaways\Meituans\SaveOrders($data, $this->store);
 		return $this->method->render();
 	}

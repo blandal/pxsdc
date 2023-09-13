@@ -4,6 +4,7 @@ namespace App\Takeaways\Meituans;
 use App\Models\Order;
 use App\Models\Store;
 use App\Models\Platform;
+use App\Models\ProductSku;
 use App\Models\OrderProduct;
 use Illuminate\Support\Facades\DB;
 use App\Takeaways\Meituan;
@@ -19,6 +20,7 @@ class SaveOrders extends Meituan{
 	private $stores 	= [];
 	private $platformObj= [];
 	private $changeStatus 	= 25;
+	private $opIds 		= [];
 	public function __construct(array $data, Store $store){
 		$this->store 		= $store;
 		$this->platform 	= $store->platform->id;
@@ -67,14 +69,38 @@ class SaveOrders extends Meituan{
 		}
 	}
 
-	public function render(){
+	public function render(){//返回的是product_skus表的id对应本次列表下单的总数量
 		if($this->status === true){
 			DB::transaction(function () {
-				Order::insert($this->addOrder);
-				OrderProduct::insert($this->addOp);
+				if(!empty($this->addOrder)){
+					Order::insert($this->addOrder);
+				}
+				if(!empty($this->addOp)){
+					OrderProduct::insert($this->addOp);
+					$skulessStocks 	= [];
+					foreach($this->addOp as $item){
+						if(!isset($skulessStocks[$item['sku_id']])){
+							$skulessStocks[$item['sku_id']] 	= $item['quantity'];
+						}else{
+							$skulessStocks[$item['sku_id']] 	+= $item['quantity'];
+						}
+					}
+					$ps 	= ProductSku::whereIn('sku_id', array_keys($skulessStocks))
+										->where('platform_id', $this->platform)
+										->where('storeId', $this->store->store_id)->get();
+					foreach($ps as $item){
+						if(isset($skulessStocks[$item->sku_id])){
+							$stock 			= $skulessStocks[$item->sku_id];
+							if($stock < 0){
+								$stock 		= 0;
+							}
+							$this->opIds[$item->id] 	= $stock;
+						}
+					}
+				}
 			}, 3);
 		}
-		return $this->status;
+		return $this->opIds;
 	}
 
 	/**

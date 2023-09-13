@@ -16,6 +16,8 @@ class Order extends Model{
      * 将平台传递的订单列表信息写入数据库,也就是采集入库
      */
     public static function saveOrder($data, Factory $oob){
+        $insertIds  = $oob->saveOrders($data);
+        dd($insertIds);
         return $oob->saveOrders($data);
     }
 

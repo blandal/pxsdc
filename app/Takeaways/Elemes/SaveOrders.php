@@ -4,6 +4,7 @@ namespace App\Takeaways\Elemes;
 use App\Models\Order;
 use App\Models\Store;
 use App\Models\Platform;
+use App\Models\ProductSku;
 use App\Models\OrderProduct;
 use Illuminate\Support\Facades\DB;
 use App\Takeaways\Eleme;
@@ -16,6 +17,7 @@ class SaveOrders extends Eleme{
 	private $addOp 		= [];
 	private $data  		= [];
 	private $store 		= null;
+	private $opIds 		= [];
 	public function __construct(array $data, Store $store){
 		if(!isset($data[0])){
 			if(!isset($data['data']['data']['mainOrderList'])){
@@ -29,45 +31,47 @@ class SaveOrders extends Eleme{
 		$this->dbOrders = Order::whereIn('orderid', $orderIds)
 							->where('platform_id', $store->platform->id)
 							->where('store_id', $store->store_id)->pluck('id', 'orderid')->toArray();
-// dd($orderIds, $this->dbOrders);
-		// dd($this->dbOrders, $data);
-		// $tmps 				= Order::whereIn('orderid', $orderIds)->where('platform_id', $platform)->get();
-		// foreach($tmps as $item){
-		// 	$this->dbOrders[$item->orderid]	= $item;
-		// }
-		// $this->platformObj	= Platform::pluck('object', 'id')->toArray();
-		// $tmp 				= Store::select('platform_id', 'store_id', 'cookie')->get()->toArray();
-		// foreach($tmp as $item){
-		// 	if(!$item['cookie']){
-		// 		continue;
-		// 	}
-		// 	$item['oob']		= null;
-		// 	if(isset($this->platformObj[$item['platform_id']])){
-		// 		$item['oob'] 	= new $this->platformObj[$item['platform_id']]($item['cookie']);
-		// 	}
-		// 	$this->stores[$item['store_id']]	= $item;
-		// }
-
-		// try {
-			foreach($data as $item){
-				$this->fmtrow($item);
-				if(!$this->status){
-					break;
-				}
+		foreach($data as $item){
+			$this->fmtrow($item);
+			if(!$this->status){
+				break;
 			}
-		// } catch (\Exception $e) {
-		// 	throw new \Exception($e->getMessage(), 1);
-		// }
+		}
 	}
 
-	public function render(){
+	public function render(){//返回的是product_skus表的id对应本次列表下单的总数量
 		if($this->status === true){
 			DB::transaction(function () {
-				Order::insert($this->addOrder);
-				OrderProduct::insert($this->addOp);
+				if(!empty($this->addOrder)){
+					Order::insert($this->addOrder);
+				}
+				if(!empty($this->addOp)){
+					OrderProduct::insert($this->addOp);
+					$skulessStocks 		= [];
+					foreach($this->addOp as $item){
+						if(!isset($skulessStocks[$item['itemSkuId']])){
+							$skulessStocks[$item['itemSkuId']] 	= $item['quantity'];
+						}else{
+							$skulessStocks[$item['itemSkuId']] 	+= $item['quantity'];
+						}
+					}
+					$ps 	= ProductSku::whereIn('itemSkuId', array_keys($skulessStocks))
+										->where('platform_id', $this->store->platform->id)
+										->where('storeId', $this->store->store_id)->get();
+
+					foreach($ps as $item){
+						if(isset($skulessStocks[$item->itemSkuId])){
+							$stock 			= $skulessStocks[$item->itemSkuId];
+							if($stock < 0){
+								$stock 		= 0;
+							}
+							$this->opIds[$item->id] 	= $stock;
+						}
+					}
+				}
 			}, 3);
 		}
-		return $this->status;
+		return $this->opIds;
 	}
 
 	/**
@@ -117,6 +121,7 @@ class SaveOrders extends Eleme{
 						'title'				=> $item['name'],
 						'customSkuId'		=> $item['ext']['extCode'],
 						'platform_id'		=> $platform_id,
+						'itemSkuId'			=> $item['skuId'] ?? $item['itemId'],
 					];
 				}
 				// if(isset($this->stores[$store_id])){

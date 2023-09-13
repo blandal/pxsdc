@@ -27,6 +27,11 @@ class Store extends Model{
         return $this->belongsTo(Platform::class);
     }
 
+    public function getInstances(){
+        $obs    = $this->platform->object;
+        return new $obs($this);
+    }
+
     public static function getInstance($store_id, $platform_id){
         $res    = self::where('platform_id', $platform_id)->where('store_id', $store_id)->first();
         if(!$res){

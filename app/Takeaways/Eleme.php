@@ -13,7 +13,6 @@ use GuzzleHttp\Client;
 
 //cna=eH15HR52OU4CATs4lCf1Qf6E; WMUSS=MWYZYZMTAwMDIwMDI1ODA0MzEyT2lBOXlWQjNQ; SWITCH_SHOP=; WMSTOKEN=MWYZYZMTAwMDIwMDI1ODA0MzEyT2lBOXlWQjNQ; OUTER_AUTH_LOGIN=MWYZYZMTAwMDIwMDI1ODA0MzEyT2lBOXlWQjNQ%3BMWYZYZMTAwMDIwMDI1ODA0MzEyT2lBOXlWQjNQ; xlly_s=1; _m_h5_tk=4eae4153ca19b7606d417c040fd8d3b3_1694403492958; _m_h5_tk_enc=36cf5530f1d7895304a8b293984da617; l=fBMkwck7Nvs9yn4FBO5CFurza77t4QAb8sPzaNbMiIEGB6v0ZFv9XY-Q2OlErxxPWhQNes6wR3-WjmOpBWLRLyCT4RpK5n5LJCHmndhyN3pR.; tfstk=dkhK11HW-g-Mxz98rL4JILPylhDWSxJcY2lrA_fuZkvsXligr8TEq_HtjmEIK0YEw_HsjzxeUU5-j4nAZeknqcC-2Al3x20n2YE7buc3Ok4S24nxTk0n-0U-xWwrKuq3273rDFxDiI0E87PBmnADkxZbt2tKrdqj82PzNNjWnAgUyNdz3GXHmM_P6_coZy9yD1RPm5xOHJqjRkgn-fsgB9uLX_1S6AeCQDcmMasVmoUldFLOUTyQ7nEBzJ1..; isg=BDw9BV30dDGRB0Bqekif8o7NDdruNeBf-tf6iBa_HycG4d1rPkED78odwQmZqRi3
 
-//4eae4153ca19b7606d417c040fd8d3b3_1694403492958
 class Eleme implements Factory{
 	private $domain 	= 'https://nrshop.ele.me/h5/';
 	private $store 		= null;
@@ -26,6 +25,7 @@ class Eleme implements Factory{
 		'type'		=> 'json',
 		'dataType'	=> 'json',
 		'valueType'	=> 'string',
+		'appKey'	=> '12574478',
 	];
 	protected $headers 	= [
 		'Accept'    => 'application/json, text/plain, */*',
@@ -115,10 +115,7 @@ class Eleme implements Factory{
 		$this->method 		= new \App\Takeaways\Elemes\ChangeStock();
 		if($productSku->many == 1){
 			$skus 			= ProductSku::where('itemId', $productSku->itemId)->get();
-			$this->method->itemEditDTO__itemId($productSku->itemId);
-			$this->method->itemEditDTO__fromChannel('ITEM_EDIT');
-			$this->method->itemEditDTO__sellerId($this->store->sellerId);
-			$this->method->itemEditDTO__itemId($this->store->store_id);
+			$this->method->itemEditDTO__itemId((int)$productSku->itemId);
 			$arr 			= [];
 			foreach($skus as $item){
 				$params 	= json_decode($item->params);
@@ -127,46 +124,40 @@ class Eleme implements Factory{
 				}
 				if($item->id == $productSku->id){
 					$params->quantity 			= $stock;
-					$productSku->params 		= json_encode($params);
+					$productSku->params 		= json_encode($params, JSON_UNESCAPED_UNICODE);
 				}
-				$arr[]		= [
-					'barcode'		=> $params->barcode,
-					'itemSkuId'		=> $params->itemSkuId,
-					'itemWeight'	=> $params->itemWeight,
-					'price'			=> $params->price,
-					'productSkuId'	=> $params->productSkuId,
-					'quantity'		=> $item->id == $productSku->id ? $params->quantity : $item->stocks,
+				$arr[]		= json_encode([
+					'barcode'		=> (string)$params->barcode,
+					'itemSkuId'		=> (int)$params->itemSkuId,
+					'itemWeight'	=> (int)$params->itemWeight,
+					'price'			=> (float)$params->price,
+					'productSkuId'	=> (string)$params->productSkuId,
+					'quantity'		=> $item->id == $productSku->id ? (int)$params->quantity : (int)$item->stocks,
 					'salePropertyList'	=> $params->salePropertyList,
 					'skuOuterId'	=> $params->skuOuterId,
-				];
+				], JSON_UNESCAPED_UNICODE);
 			}
-			$this->method->itemEditDTO__itemSkuList(json_encode($arr));
+			$this->method->itemEditDTO__itemSkuList($arr);
+			$this->method->itemEditDTO__fromChannel('ITEM_EDIT');
+			$this->method->itemEditDTO__sellerId($this->store->sellerId);
+			$this->method->itemEditDTO__itemId((int)$productSku->itemId);
+			$this->method->itemEditDTO__storeId((int)$this->store->store_id);
 			$this->method->manyUpdate();
 		}else{
 			$this->method->sellerId($this->store->sellerId)
-							->itemId($productSku->itemId)
-							->storeId($this->store->store_id)
-							->isWeight($productSku->isWeight)
+							->itemId((int)$productSku->itemId)
+							->storeId((int)$this->store->store_id)
+							->isWeight($productSku->isWeight ? true : false)
 							->weightType($productSku->weightType)
 							->quantity($stock);
 		}
 		$str 		= $this();
 		$str 		= json_decode($str, true);
-		dd($str);
 		if(isset($str['ret'][0]) && strpos($str['ret'][0], 'SUCCESS') !== false){
-			dd($str);
 			return true;
-		}else{
-			dd($str);
 		}
+		dd($str, '~~~~~~~~');
 		return '库存修改失败!';
-		// return $this();
-		// $this->method 	= (new \App\Takeaways\Elemes\ChangeStock())
-		// 		->sellerId($this->store->sellerId)
-		// 		->spuId($spuid)
-		// 		->skuStocks_0_skuId($skuid)
-		// 		->skuStocks_0_stock($stock);
-		// return $this();
 	}
 
 	/**
@@ -199,7 +190,6 @@ class Eleme implements Factory{
 			}
 		}
 
-
 		$headers 	= $this->headers;//array_merge($this->headers, [
 		//	'Cookie'    => implode(';', $this->cookie),
 		//]);
@@ -220,43 +210,39 @@ class Eleme implements Factory{
 		}else{
 			$data 			= $args['data'];
 			unset($args['data']);
-			// dd($args, $url, ['data' => $data], $headers);
+			dd($args, $url, ['data' => $data], $headers);
 			$result 		= $client->post($url, ['query' => $args, 'form_params' => ['data' => $data]]);
 		}
-
-		// $result 		= $client->get($url, ['query' => $args]);
-		try {
-			$respCookies 	= $result->getHeaderer('set-cookie');
-			if(!empty($respCookies)){
-				$cookietmp 	= [];
-				foreach($this->cookie as $item){
-					$tmp 	= explode('=', $item);
-					$cookietmp[trim($tmp[0])] 	= $tmp[1];
-				}
-				foreach($respCookies as $item){
-					$tmp 	= explode(';', trim($item));
-					$item 	= $tmp[0];
-					$tmp 	= explode('=', $item);
-					$cookietmp[trim($tmp[0])]	= trim($tmp[1]);
-				}
-				$cooikeArr 			= [];
-				foreach($cookietmp as $k => $item){
-					if($k == '_m_h5_tk'){
-						$tts 			= explode('_', $item);
-						$this->token 	= $tts[0];
-						$this->tokenTimout 	= (int)($tts[1] / 1000);
-					}
-					$cooikeArr[] 	= "$k=$item";
-				}
-				$this->cookie 		= $cooikeArr;
-				$this->store->cookie 		= implode(';', $this->cookie);
-				$this->store->save();
-				$this->headers['Cookie']	= $this->store->cookie;
+		$respCookies 		= $result->getHeaders();
+		if(isset($respCookies['Set-Cookie'])){
+			$respCookies 	= $respCookies['Set-Cookie'];
+			$cookietmp 	= [];
+			foreach($this->cookie as $item){
+				$tmp 	= explode('=', $item);
+				$cookietmp[trim($tmp[0])] 	= $tmp[1];
 			}
-		} catch (\Exception $e) {}
-		
+			foreach($respCookies as $item){
+				$tmp 	= explode(';', trim($item));
+				$item 	= $tmp[0];
+				$tmp 	= explode('=', $item);
+				$cookietmp[trim($tmp[0])]	= trim($tmp[1]);
+			}
+			$cooikeArr 			= [];
+			foreach($cookietmp as $k => $item){
+				if($k == '_m_h5_tk'){
+					$tts 			= explode('_', $item);
+					$this->token 	= $tts[0];
+					$this->tokenTimout 	= (int)($tts[1] / 1000);
+				}
+				$cooikeArr[] 	= "$k=$item";
+			}
+			$this->cookie 		= $cooikeArr;
+			$this->store->cookie 		= implode(';', $this->cookie);
+			$this->store->save();
+			$this->headers['Cookie']	= $this->store->cookie;
+		}
+
 		return $result->getBody()->getContents();
-		dd($result->getBody()->getContents());
 // cna=eH15HR52OU4CATs4lCf1Qf6E; WMUSS=MWYZYZMTAwMDIwMDI1ODA0MzEyT2lBOXlWQjNQ; SWITCH_SHOP=; WMSTOKEN=MWYZYZMTAwMDIwMDI1ODA0MzEyT2lBOXlWQjNQ; OUTER_AUTH_LOGIN=MWYZYZMTAwMDIwMDI1ODA0MzEyT2lBOXlWQjNQ%3BMWYZYZMTAwMDIwMDI1ODA0MzEyT2lBOXlWQjNQ; xlly_s=1; _m_h5_tk=4eae4153ca19b7606d417c040fd8d3b3_1694403492958; _m_h5_tk_enc=36cf5530f1d7895304a8b293984da617; l=fBMkwck7Nvs9yv9fBO5Clurza77T1IOb4sPzaNbMiIEGB6Y74Fp9XY-Q2O8o8q-5WhQNF659R3-WjmOpBeYBqCXUBYDeDTxk1CMmnmOk-Wf..; tfstk=dnGkzF1BkYy7ET2dJTFWZBj4Qevvr7NaTHoLvk3UYzqb4JeK86YnXoe-e78W-6mxj3wLpQwhKcHbJYEpFBY30cYBV3N-tXmqDbrz93i0YVibJYKzwXcn0cu-x2T78koExkHJHC3SPWNeXDA9646MoW-9qvpY74NQThQATddiPc_AJmsGA1snN3GXrREGJnu1E01lsag8m65G5z2Pg4BdT6l0r8cErOuG3OP_V6a2JjWCd8zbolEgVMVV.; isg=BCkp6zB3aaaNXVUVhytypYteONWD9h0oH-RPF8sfzZBDkkmkE0RL-DyMVDakCrVg
 
 
@@ -285,23 +271,6 @@ class Eleme implements Factory{
 		$this->method 	= (new \App\Takeaways\Elemes\FlushToken());
 		$res 			= $this();
 		return;
-
-
-		$headers 	= $this->headers;
-		$data 		= '{"deviceId":"6F049574F7B0055A19F2E2C0EFF68904","platformType":4,"pageSize":100,"pageIndex":1}';
-		$uri 		= 'mtop.ele.newretail.merchant.notice.DevMsgService.unreadMsgListV2';
-		$this->sigin($data, '', '', $uri);
-
-		$url 		= $this->domain . $uri . '/' . $this->version . '/';
-		$client 	= new Client([
-			'verify'	=> false,
-			'headers'	=> $headers,
-		]);
-		$args 		= json_decode($data, true);
-		dd($url, $args, $headers);
-		$result 	= $client->get($url, ['query' => $args]);
-		dd($result->getBody()->getContents());
-		dd($result->getHeader());
 	}
 
 	/**
@@ -319,7 +288,7 @@ class Eleme implements Factory{
 	 * @param $data 	平台返回的商品列表
 	 * @return bool
 	 */
-	public function saveOrders(array $data) :bool{
+	public function saveOrders(array $data) :array{
 		$this->method 	= new \App\Takeaways\Elemes\SaveOrders($data, $this->store);
 		return $this->method->render();
 	}
@@ -336,28 +305,47 @@ class Eleme implements Factory{
 			list($microsecond , $time) = explode(' ', microtime());
 			$ts 	= (string)sprintf('%.0f',(floatval($microsecond)+floatval($time))*1000);
 		}
-		if(!$appkey){
-			$appkey 	= 12574478;
+		if($appkey){
+			$this->args['appKey']	= $appkey;
 		}
 		if(is_array($data)){
 			foreach($data as &$item){
 				if(is_array($item)){
-					$item 	= json_encode($item);
+					$item 	= json_encode($item, JSON_UNESCAPED_UNICODE);
 				}
 			}
-			$data 	= json_encode($data);
+			$data 	= json_encode($data, JSON_UNESCAPED_UNICODE);
 		}
-		$this->args['appKey']	= 12574478;
+		// if($this->method->method == 'post'){
+		// 	$data 	= str_replace('\\', '\\\\', $data);
+		// }
+
+		$signStr 				= "$this->token&$ts&".$this->args['appKey']."&$data";
 		$this->args['t']		= $ts;
-		$signStr 				= "$this->token&$ts&$appkey&$data";
-		$this->args['sign']		= md5($signStr);//$this->command($signStr);//
+		$this->args['sign']		= $this->command($signStr);//md5($signStr);//
 		$this->args['api']		= $uri ? $uri : ($this->method->uri ?? null);
 		$this->args['v']		= $this->version;
 		$this->args['data']		= $data;
-		// if($this->method->method == 'get'){
-		// 	$this->args['data']		= $data;
-		// }
+		// dd($signStr);
 		return true;
+	}
+
+	private function fmtdata($data){
+		if(is_array($data)){
+			foreach($data as $k => $v){
+				if(is_array($v)){
+					foreach($v as $z => $c){
+						if(is_array($c)){
+							$v[$z] 	= json_encode($c, JSON_UNESCAPED_UNICODE);
+						}
+					}
+				}else{
+					$data[$k]	= $v;
+				}
+			}
+			$data 	= json_encode($data, JSON_UNESCAPED_UNICODE);
+		}
+		return $data;
 	}
 
 	private function command($str){

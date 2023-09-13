@@ -67,7 +67,7 @@ class SaveProducts{
 	//获取数据库skus
 	private function getDbskus($data){
 		$this->skus 		= $this->skus($data);
-		$arr 				= ProductSku::whereIn('upc', $this->skus)->where('platform_id', $this->platform)->where('storeId', $this->store->id)->get();
+		$arr 				= ProductSku::whereIn('upc', $this->skus)->where('platform_id', $this->platform)->where('storeId', $this->store->store_id)->get();
 		foreach($arr as $item){
 			$this->dbskus[$item->upc]	= $item;
 		}
@@ -144,7 +144,8 @@ class SaveProducts{
 		$dbHasMany 		= 0;
 		if(isset($this->dbspus[$spu_id])){
 			if($this->dbspus[$spu_id]->product_id != $product_id){
-				return $this->seterr($spu_id . ' 的 product_id 不一致!');
+				$product_id 	= $this->dbspus[$spu_id]->product_id;
+				// return $this->seterr($spu_id . ' 的 product_id 不一致!');
 			}
 			if($this->dbspus[$spu_id]->manysku != $hasMany){//如果更改了sku
 				$this->dbspus[$spu_id]->manysku 	= $hasMany;
@@ -169,7 +170,7 @@ class SaveProducts{
 		$skubaseArr 	= [
 			'platform_id'		=> $this->platform,
 			'spu_id'			=> $spu_id,
-			'sku_id'			=> $spu_id,
+			'sku_id'			=> $upc,
 			'upc'				=> $row['barCode'],
 			'weight'			=> $row['itemWeight'] ?? 0,
 			'spec'				=> null,
@@ -197,6 +198,7 @@ class SaveProducts{
 					if($this->dbskus[$upcc]->many != $hasMany){//如果之前是单sku改为现在的多sku
 						$this->dbskus[$upcc]->many 		= 1;
 						$this->dbskus[$upcc]->params 	= json_encode($item);
+						$this->dbskus[$upcc]->itemSkuId = $item['itemSkuId'];
 						$this->dbskus[$upcc]->save();
 					}
 				}else{
@@ -204,7 +206,7 @@ class SaveProducts{
 					$arrr['itemSkuId']		= $item['itemSkuId'];
 					$arrr['propId']			= $item['salePropertyList'][0]['propId'];
 					$arrr['propText']		= $item['salePropertyList'][0]['propText'];
-					$arrr['sku_id']			= $item['itemSkuId'];
+					$arrr['sku_id']			= $upcc;
 					$arrr['upc']			= $upcc;
 					$arrr['weight']			= $item['itemWeight'] ?? 0;
 					$arrr['spec']			= $item['salePropertyList'][0]['valueText'];
@@ -217,9 +219,9 @@ class SaveProducts{
 				}
 			}
 		}elseif(isset($this->dbskus[$upc])){
-			if($this->dbskus[$sku_id]->many == 1){
-				$this->dbskus[$sku_id] 	= 0;
-				$this->dbskus[$sku_id]->save();
+			if($this->dbskus[$upc]->many == 1){
+				$this->dbskus[$upc] 	= 0;
+				$this->dbskus[$upc]->save();
 			}
 		}else{
 			$this->addSkus[] 	= $skubaseArr;

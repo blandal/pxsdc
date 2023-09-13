@@ -9,8 +9,8 @@ use App\Takeaways\Meituan;
 use App\Takeaways\BaseFactory;
 class ChangeStock extends Meituan{
 	use BaseFactory;
-	protected $method 	= 'get';
-	protected $uri 		= 'mtop.ele.newretail.item.edit';
+	protected $method 	= 'post';
+	protected $uri 		= '/channelStock/batchSaveSkuStock';
 	protected $args 	= [
 		'storeId'			=> 0,
 		'spuId'				=> '',

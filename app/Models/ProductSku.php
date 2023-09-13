@@ -13,17 +13,47 @@ class ProductSku extends Model{
     public $timestamps      = false;
     private $pltobjs        = [];
 
+    public function store(){
+        return $this->hasOne('App\Models\Store', 'store_id', 'storeId')->where('platform_id', $this->platform_id);
+    }
+
+    public static function newOrderForChangeStocks(array $order_product_ids){
+        // dd($order_product_ids);
+        foreach(self::whereIn('id', array_keys($order_product_ids))->get() as $item){
+            $item->stocks   -= $order_product_ids[$item->id];
+            if($item->stocks < 0){
+                $item->stocks   = 0;
+            }
+            $item->save();
+            dd($item->toArray());
+        }
+    }
+
     public function setStocksAttribute($val){
         if($val != $this->stocks){
-            if(!isset($this->pltobjs[$this->platform_id][$this->storeId])){
-                $tmp    = Store::getInstance($this->storeId, $this->platform_id);
-                if(!($tmp instanceof Factory)){
-                    throw new \Exception('平台sdk实例化失败!', 1);
+            set_time_limit(0);
+            //找出其他平台同产品
+            $binds  = explode(',', $this->bind);
+            foreach($binds as $bindid){
+                $needchange  = self::find($bindid);
+
+                if($needchange && $needchange->store->getInstances()->changeStock($val, $needchange) == true){
+                    self::where('id', $bindid)->update(['stocks' => $val]);
+                }else{
+                    dd($needchange);
+                    throw new \Exception('更新失败!!!!', 1);
                 }
-                $this->pltobjs[$this->platform_id][$this->storeId]  = $tmp;
             }
 
-            $issuccess   = $this->pltobjs[$this->platform_id][$this->storeId]->changeStock($val, $this);
+            // if(!isset($this->pltobjs[$this->platform_id][$this->storeId])){
+            //     $tmp    = Store::getInstance($this->storeId, $this->platform_id);
+            //     if(!($tmp instanceof Factory)){
+            //         throw new \Exception('平台sdk实例化失败!', 1);
+            //     }
+            //     $this->pltobjs[$this->platform_id][$this->storeId]  = $tmp;
+            // }
+
+            // $issuccess   = $this->pltobjs[$this->platform_id][$this->storeId]->changeStock($val, $this);
             // $cont  = json_decode($str, true);
             // if(!$cont){
             //     throw new \Exception('返回失败: ' . $str, 1);
@@ -33,9 +63,9 @@ class ProductSku extends Model{
             //     $msg    = $cont['msg'] ?? '!!请求失败!';
             //     throw new \Exception($msg, 1);
             // }
-            if($issuccess !== true){
-                throw new \Exception($issuccess, 1);
-            }
+            // if($issuccess !== true){
+            //     throw new \Exception($issuccess, 1);
+            // }
             $this->attributes['stocks']     = $val;
         }
     }

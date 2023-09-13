@@ -11,7 +11,7 @@ interface Factory{
 	public function getProducts(int $page = 1, int $pagesize = 10);
 	public function changeStock(int $stock, ProductSku $productSku);
 	public function saveProducts(array $data):bool;
-	public function saveOrders(array $data):bool;
+	public function saveOrders(array $data):array;
 	public function orderProducts(string $orderid);
 	public function getOrders(int $page = 1, int $pagesize = 10);
 	public function getPlatform();
