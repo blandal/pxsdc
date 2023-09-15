@@ -5,9 +5,8 @@
 namespace App\Takeaways\Meituans;
 
 use App\Models\Store;
-use App\Models\Product;
-use App\Models\ProductSpu;
-use App\Models\ProductSku;
+use App\Models\Pro;
+use App\Models\Sku;
 use App\Takeaways\BaseFactory;
 class SaveProducts{
 	use BaseFactory;
@@ -24,16 +23,114 @@ class SaveProducts{
 	private $upcTable 	= [];
 	private $skusTable	= [];
 	public function __construct(array $data, Store $store){
-		$this->store 		= $store;
-		$this->platform 	= $store->platform->id;
-		$this->stores 		= Store::getStoreId2Name($this->platform);
-		$this->dbstore 		= $this->stores;
 		if(!isset($data[0])){
 			if(!isset($data['data']['list'])){
 				return $this->seterr('传入数据格式错误,不是一个数组或者没有 data 的 key');
 			}
 			$data 	= $data['data']['list'];
 		}
+
+
+		$titles 			= array_column($data, 'name');
+		$titleObj 			= [];
+		$tmp 				= Pro::whereIn('title', $titles)->get();
+		foreach($tmp as $item){
+			$titleObj[$item->title]	= $item;
+		}
+
+		$skusIds 			= [];
+		foreach($data as $item){
+			foreach($item['storeSkuList'] as $val){
+				$skusIds[] 	= $val['skuId'];
+			}
+		}
+
+		$tmp 				= Sku::where('platform', $store->platform->id)
+									->where('store_id', $store->store_id)
+									->whereIn('sku_id', $skusIds)->get();
+		$skus 				= [];//数据库已存在的sku
+		foreach($tmp as $item){
+			$skus[$item->sku_id] 	= $item;
+		}
+
+		$waitAdd 		= [];
+		foreach($data as $row){
+			$title 		= $row['name'];
+			// if(strpos($title, '高弹加大可调节孕妇立体托腹包芯丝孕妇裤 1条') !== false){
+			// 	dd($row, $skus);
+			// }
+			$cate1 				= '';
+			$cate2 				= '';
+			if(isset($row['channelSpuList'][0]['frontCategories'][0]['frontCategoryNamePath'])){
+				$tmp 			= explode('>', $row['channelSpuList'][0]['frontCategories'][0]['frontCategoryNamePath']);
+				$cate1 			= $tmp[0];
+				$cate2 			= $tmp[1] ?? '';
+			}
+			if(!isset($titleObj[$title])){
+				$tmp 	= new Pro;
+				$tmp->title 		= $title;
+				$tmp->cate1 		= $cate1;
+				$tmp->cate2 		= $cate2;
+				$tmp->images 		= $row['mainImage'];
+				$tmp->save();
+				$titleObj[$title] 	= $tmp;
+			}elseif((!$titleObj[$title]->cate1 || !$titleObj[$title]->cate2) && ($cate1 || $cate2)){
+				$titleObj[$title]->cate1 	= $cate1;
+				$titleObj[$title]->cate2 	= $cate2;
+			}
+
+			$proid 		= $titleObj[$title]->id;
+			$spu_id 	= $row['spuId'];
+
+			$themsku 	= [];
+			foreach($row['storeSkuList'] as $item){
+				$sku_id 	= $item['skuId'];
+				// if($sku_id == '1680783353731117068'){
+				// 	dd($row, $skus);
+				// }
+				$themsku[$sku_id] 	= [
+					'platform'	=> $store->platform->id,
+					'store_id'	=> $item['storeId'],
+					'sku_id'	=> $sku_id,
+					'pro_id'	=> $proid,
+					'spu_id'	=> $spu_id,
+					'price'		=> 0,
+					'stocks'	=> 0,
+					'upc'		=> $item['upc'],
+					'weight'	=> $item['weight'],
+					'title'		=> $title,
+					'name'		=> $item['spec'],
+					'customid'	=> '',
+					'status'	=> $row['status'],
+				];
+			}
+			foreach($row['channelSpu']['channelSkuList'] as $item){
+				$sku_id 	= $item['skuId'];
+				if(isset($themsku[$sku_id])){
+					$themsku[$sku_id]['price']		= $item['price'];
+					$themsku[$sku_id]['stocks']		= $item['stock'];
+					$themsku[$sku_id]['customid']	= $item['customSkuId'];
+				}
+			}
+			foreach($themsku as $sku_id => $item){
+				if(isset($skus[$sku_id])){
+					$this->updateSku($skus[$sku_id], $item['stocks'], $item['status'], $proid);
+				}else{
+					$waitAdd[] 	= $item;
+				}
+			}
+		}
+		Sku::insert($waitAdd);
+		return true;
+
+
+
+
+		$this->store 		= $store;
+		$this->platform 	= $store->platform->id;
+		$this->stores 		= Store::getStoreId2Name($this->platform);
+		$this->dbstore 		= $this->stores;
+		
 
 		//解析出spu
 		$spus 			= array_column($data, 'spuId');
@@ -70,6 +167,29 @@ class SaveProducts{
 			}
 		} catch (\Exception $e) {
 			throw new \Exception($e->getMessage(), 1);
+		}
+	}
+
+	/**
+	 * 更新sku,目前仅支持更新库存和状态
+	 */
+	private function updateSku(Sku $dbrow, $quality, $status, $proid){
+		$cansave 	= false;
+		if($dbrow->stocks != $quality){
+			$dbrow->stocks 	= $quality;
+			$cansave 		= true;
+		}
+		if($dbrow->status != $status){
+			$dbrow->status 	= $status;
+			$cansave 		= true;
+		}
+		if($dbrow->pro_id != $proid){
+			$dbrow->pro_id 	= $proid;
+			$cansave 		= true;
+		}
+		
+		if($cansave){
+			$dbrow->save();
 		}
 	}
 

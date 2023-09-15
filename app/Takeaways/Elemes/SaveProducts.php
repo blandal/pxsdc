@@ -5,15 +5,17 @@
 namespace App\Takeaways\Elemes;
 
 use App\Models\Store;
-use App\Models\Product;
-use App\Models\ProductSpu;
-use App\Models\ProductSku;
+// use App\Models\Product;
+// use App\Models\ProductSpu;
+// use App\Models\ProductSku;
+
+use App\Models\Pro;
+use App\Models\Sku;
+
 use App\Takeaways\BaseFactory;
 class SaveProducts{
 	use BaseFactory;
 	private $platform 	= 0;
-	private $dbstore 	= [];
-	private $stores 	= [];
 	private $addStores 	= [];
 	private $addBases 	= [];
 	private $addSpus 	= [];
@@ -26,14 +28,99 @@ class SaveProducts{
 	public function __construct(array $data, Store $store){
 		$this->store 		= $store;
 		$this->platform 	= $store->platform->id;
-		$this->stores 		= Store::getStoreId2Name($this->platform);
-		$this->dbstore 		= $this->stores;
 		if(!isset($data[0])){
 			if(!isset($data['data']['data'])){
 				return $this->seterr('传入数据格式错误,不是一个数组或者没有 data 的 key' . json_encode($data, JSON_UNESCAPED_UNICODE));
 			}
 			$data 	= $data['data']['data'];
 		}
+
+		$titles 			= array_column($data, 'title');
+		$titleObj 			= [];
+		$tmp 				= Pro::whereIn('title', $titles)->get();
+		foreach($tmp as $item){
+			$titleObj[$item->title]	= $item;
+		}
+
+		$tmp 				= Sku::where('platform', $this->store->platform->id)
+									->where('store_id', $this->store->store_id)
+									->whereIn('spu_id', array_column($data, 'itemId'))->orderBy('id')->get();
+		$skus 				= [];//数据库已存在的sku
+		foreach($tmp as $item){
+			$skus[$item->spu_id][$item->sku_id] 	= $item;
+		}
+
+
+		$waitAdd 		= [];
+		foreach($data as $row){
+			$title 		= $row['title'];
+			$cate1 		= $row['customCategoryParentName'];
+			$cate2		= $row['customCategoryName'];
+			if(!isset($titleObj[$title])){
+				$tmp 	= new Pro;
+				$tmp->title 		= $title;
+				$tmp->cate1 		= $cate1;
+				$tmp->cate2 		= $cate2;
+				$tmp->images 		= $row['picUrl'];
+				$tmp->save();
+				$titleObj[$title] 	= $tmp;
+			}elseif((!$titleObj[$title]->cate1 || !$titleObj[$title]->cate2) && ($cate1 || $cate2)){
+				$titleObj[$title]->cate1 	= $cate1;
+				$titleObj[$title]->cate2 	= $cate2;
+			}
+
+			$proid 		= $titleObj[$title]->id;
+			$spu_id 	= $row['itemId'];
+			$sku_id 	= '';
+
+			$skuarr 	= [
+				'platform'	=> $this->store->platform->id,
+				'store_id'	=> $row['storeId'],
+				'sku_id'	=> $spu_id,
+				'pro_id'	=> $proid,
+				'spu_id'	=> $spu_id,
+				'price'		=> $row['price'] ?? 0,
+				'stocks'	=> $row['quantity'],
+				'upc'		=> $row['barCode'],
+				'weight'	=> $row['itemWeight'],
+				'title'		=> $title,
+				'name'		=> '',
+				'customid'	=> $row['outId'],
+				'other'		=> '',
+				'status'	=> $row['status'],
+			];
+			if($row['hasSku'] == true){
+				foreach($row['itemSkuList'] as $item){
+					if(isset($skus[$spu_id][$item['itemSkuId']])){
+						$this->updateSku($skus[$spu_id][$item['itemSkuId']], $item['quantity'], $row['status'], $proid);
+					}else{
+						$tmp 	= $skuarr;
+						$tmp['other']	= is_array($item['salePropertyList']) ? json_encode($item['salePropertyList'], JSON_UNESCAPED_UNICODE) : $item['salePropertyList'];
+						$tmp['sku_id']	= $item['itemSkuId'];
+						$tmp['price']	= $item['price'];
+						$tmp['weight']	= $item['itemWeight'];
+						$tmp['stocks']	= $item['quantity'];
+						$tmp['upc']		= $item['barcode'];
+						$tmp['customid']= $item['skuOuterId'];
+						$tmp['name']	= $item['salePropertyList'][0]['valueText'];
+						$waitAdd[] 	= $tmp;
+					}
+				}
+			}else{
+				if(isset($skus[$spu_id][$spu_id])){
+					$this->updateSku($skus[$spu_id][$spu_id], $skuarr['stocks'], $skuarr['status'], $proid);
+				}else{
+					$waitAdd[] 	= $skuarr;
+				}
+			}
+		}
+		Sku::insert($waitAdd);
+		return true;
+
+
+
+
+
 
 		$this->spus 		= array_column($data, 'itemId');
 		$this->dbspus 		= $this->dbspus($data);
@@ -53,6 +140,43 @@ class SaveProducts{
 		// 	throw new \Exception($e->getMessage(), 1);
 		// }
 	}
+
+	/**
+	 * 更新sku,目前仅支持更新库存和状态
+	 */
+	private function updateSku(Sku $dbrow, $quality, $status, $proid){
+		$cansave 	= false;
+		if($dbrow->stocks != $quality){
+			$dbrow->stocks 	= $quality;
+			$cansave 		= true;
+		}
+		if($dbrow->status != $status){
+			$dbrow->status 	= $status;
+			$cansave 		= true;
+		}
+		if($dbrow->pro_id != $proid){
+			$dbrow->pro_id 	= $proid;
+			$cansave 		= true;
+		}
+		if($cansave){
+			$dbrow->save();
+		}
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 	//获取所有的spuid
 	private function dbspus($data){

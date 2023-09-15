@@ -124,6 +124,9 @@ class Eleme implements Factory{
 				if($item->id == $productSku->id){
 					$params->quantity 			= $stock;
 					$productSku->params 		= json_encode($params, JSON_UNESCAPED_UNICODE);
+				}else{
+					$params->quantity 			= $item->stocks;
+					$productSku->params 		= json_encode($params, JSON_UNESCAPED_UNICODE);
 				}
 				$strss 		= json_encode([
 					'barcode'		=> (string)$params->barcode,
@@ -159,6 +162,7 @@ class Eleme implements Factory{
 		// dd($str, '~~~~~~~~');
 		return '库存修改失败!';
 	}
+
 
 	/**
 	 * 获取订单商品详情

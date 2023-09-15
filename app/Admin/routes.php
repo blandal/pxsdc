@@ -15,4 +15,6 @@ Route::group([
     $router->resource('sdc/productsku', Sdc\ProductController::class);
     $router->resource('sdc/products', Sdc\ProductsController::class);
     $router->resource('product-skus', BindSkuController::class);
+    $router->resource('pros', ProController::class);
+    $router->resource('skus', SkuController::class);
 });

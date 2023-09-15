@@ -10,6 +10,7 @@ use Encore\Admin\Controllers\AdminController;
 use Encore\Admin\Form;
 use Encore\Admin\Grid;
 use Encore\Admin\Show;
+use Illuminate\Support\MessageBag;
 
 class ProductController extends AdminController
 {
@@ -52,6 +53,12 @@ class ProductController extends AdminController
         $grid->column('spu_id', __('Spu'));
         $grid->column('sku_id', __('Sku'));
         $grid->column('upc', __('upc'));
+        // $grid->column('bind', __('关联'))->display(function($val){
+        //     if($val){
+        //         return '已绑';
+        //     }
+        //     return '';
+        // })->sortable();
         $grid->column('customSkuId', __('自有id'))->hide();
         $grid->column('weight', __('Weight'))->hide();
         $grid->column('unit', __('Unit'))->hide();
@@ -120,7 +127,10 @@ class ProductController extends AdminController
             if($form->stocks != $form->model()->stocks){
                 $resp   = $form->model()->store->getInstances()->changeStock($form->stocks, $form->model());
                 if($resp !== true){
-                    throw new \Exception('库存同步错误!' . $resp);
+                    return response()->json([
+                        'status'  => false,
+                        'message' => '库存同步失败!',
+                    ]);
                 }
             }
         });
