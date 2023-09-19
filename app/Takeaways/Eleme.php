@@ -7,9 +7,10 @@ namespace App\Takeaways;
 use App\Takeaways\Factory;
 use QL\QueryList;
 use App\Models\Product;
-use App\Models\ProductSku;
+use App\Models\Sku;
 use App\Models\Store;
 use GuzzleHttp\Client;
+use Illuminate\Support\Facades\Log;
 
 //cna=eH15HR52OU4CATs4lCf1Qf6E; WMUSS=MWYZYZMTAwMDIwMDI1ODA0MzEyT2lBOXlWQjNQ; SWITCH_SHOP=; WMSTOKEN=MWYZYZMTAwMDIwMDI1ODA0MzEyT2lBOXlWQjNQ; OUTER_AUTH_LOGIN=MWYZYZMTAwMDIwMDI1ODA0MzEyT2lBOXlWQjNQ%3BMWYZYZMTAwMDIwMDI1ODA0MzEyT2lBOXlWQjNQ; xlly_s=1; _m_h5_tk=4eae4153ca19b7606d417c040fd8d3b3_1694403492958; _m_h5_tk_enc=36cf5530f1d7895304a8b293984da617; l=fBMkwck7Nvs9yn4FBO5CFurza77t4QAb8sPzaNbMiIEGB6v0ZFv9XY-Q2OlErxxPWhQNes6wR3-WjmOpBWLRLyCT4RpK5n5LJCHmndhyN3pR.; tfstk=dkhK11HW-g-Mxz98rL4JILPylhDWSxJcY2lrA_fuZkvsXligr8TEq_HtjmEIK0YEw_HsjzxeUU5-j4nAZeknqcC-2Al3x20n2YE7buc3Ok4S24nxTk0n-0U-xWwrKuq3273rDFxDiI0E87PBmnADkxZbt2tKrdqj82PzNNjWnAgUyNdz3GXHmM_P6_coZy9yD1RPm5xOHJqjRkgn-fsgB9uLX_1S6AeCQDcmMasVmoUldFLOUTyQ7nEBzJ1..; isg=BDw9BV30dDGRB0Bqekif8o7NDdruNeBf-tf6iBa_HycG4d1rPkED78odwQmZqRi3
 
@@ -110,23 +111,24 @@ class Eleme implements Factory{
 	 * 修改sku库存
 	 * @return response string
 	 */
-	public function changeStock(int $stock, ProductSku $productSku){
+	public function changeStock(int $stock, Sku $productSku){
 		$this->method 		= new \App\Takeaways\Elemes\ChangeStock();
-		if($productSku->many == 1){
-			$skus 			= ProductSku::where('itemId', $productSku->itemId)->get();
-			$this->method->itemEditDTO__itemId((int)$productSku->itemId);
+		if($productSku->other){
+			$skus 			= Sku::where('spu_id', $productSku->spu_id)->get();
+			$this->method->itemEditDTO__itemId((int)$productSku->spu_id);
 			$arr 			= [];
 			foreach($skus as $item){
-				$params 	= json_decode($item->params);
+				$params 	= json_decode($item->other);
 				if(!$params){
 					return '商品信息错误!';
 				}
 				if($item->id == $productSku->id){
-					$params->quantity 			= $stock;
-					$productSku->params 		= json_encode($params, JSON_UNESCAPED_UNICODE);
-				}else{
-					$params->quantity 			= $item->stocks;
-					$productSku->params 		= json_encode($params, JSON_UNESCAPED_UNICODE);
+					$params->quantity 	= $stock;
+					$item->stocks 		= $stock;
+					$item->other 		= json_encode($params, JSON_UNESCAPED_UNICODE);
+				}elseif($params->quantity != $item->stocks){
+					$params->quantity 	= $item->stocks;
+					$item->other 		= json_encode($params, JSON_UNESCAPED_UNICODE);
 				}
 				$strss 		= json_encode([
 					'barcode'		=> (string)$params->barcode,
@@ -134,7 +136,7 @@ class Eleme implements Factory{
 					'itemWeight'	=> (int)$params->itemWeight,
 					'price'			=> (float)$params->price,
 					'productSkuId'	=> (string)$params->productSkuId,
-					'quantity'		=> $item->id == $productSku->id ? (int)$params->quantity : (int)$item->stocks,
+					'quantity'		=> $item->id == $productSku->id ? $stock : (int)$item->stocks,
 					'salePropertyList'	=> $params->salePropertyList,
 					'skuOuterId'	=> $params->skuOuterId,
 				], JSON_UNESCAPED_UNICODE);
@@ -143,23 +145,29 @@ class Eleme implements Factory{
 			$this->method->itemEditDTO__itemSkuList($arr);
 			$this->method->itemEditDTO__fromChannel('ITEM_EDIT');
 			$this->method->itemEditDTO__sellerId($this->store->sellerId);
-			$this->method->itemEditDTO__itemId((int)$productSku->itemId);
+			$this->method->itemEditDTO__itemId((int)$productSku->spu_id);
 			$this->method->itemEditDTO__storeId((int)$this->store->store_id);
 			$this->method->manyUpdate();
 		}else{
 			$this->method->sellerId($this->store->sellerId)
-							->itemId((int)$productSku->itemId)
+							->itemId((int)$productSku->spu_id)
 							->storeId((int)$this->store->store_id)
 							->isWeight($productSku->isWeight ? true : false)
 							->weightType($productSku->weightType)
 							->quantity($stock);
 		}
-		$str 		= $this();
-		$str 		= json_decode($str, true);
-		if(isset($str['ret'][0]) && strpos($str['ret'][0], 'SUCCESS') !== false){
-			return true;
+		try {
+			$str 		= $this();
+		} catch (\Exception $e) {
+			Log::error('饿了么: ' . $e->getMessage());
 		}
-		// dd($str, '~~~~~~~~');
+		$res 		= json_decode($str, true);
+		if(isset($res['ret'][0]) && strpos($res['ret'][0], 'SUCCESS') !== false){
+			return true;
+		}else{
+			Log::debug('修改库存失败:' . $str);
+		}
+		// dd($res, '~~~~~~~~');
 		return '库存修改失败!';
 	}
 

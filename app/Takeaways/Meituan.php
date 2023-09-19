@@ -7,8 +7,9 @@ namespace App\Takeaways;
 use App\Takeaways\Factory;
 use QL\QueryList;
 use App\Models\Product;
-use App\Models\ProductSku;
+use App\Models\Sku;
 use App\Models\Store;
+use Illuminate\Support\Facades\Log;
 class Meituan implements Factory{
 	private $domain 	= 'https://qnh.meituan.com/api/v1/';
 	private $store 		= null;
@@ -69,16 +70,22 @@ class Meituan implements Factory{
 	 * 修改sku库存
 	 * @return App\Takeaways\Meituans\ChangeStock
 	 */
-	public function changeStock(int $stock, ProductSku $productSku){
+	public function changeStock(int $stock, Sku $productSku){
 		$this->method 	= (new \App\Takeaways\Meituans\ChangeStock())
 				->storeId($this->store->store_id)
 				->spuId($productSku->spu_id)
 				->skuStocks__0__skuId($productSku->sku_id)
 				->skuStocks__0__stock($stock);
-		$resp 	= $this();
-		$resp 	= json_decode($resp, true);
+		try {
+			$str 		= $this();
+		} catch (\Exception $e) {
+			Log::error('美团: ' . $e->getMessage());
+		}
+		$resp 	= json_decode($str, true);
 		if(isset($resp['code']) && $resp['code'] == 0){
 			return true;
+		}else{
+			Log::debug('修改库存失败:' . $str);
 		}
 		return false;
 	}

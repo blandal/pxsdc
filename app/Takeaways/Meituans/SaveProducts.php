@@ -23,6 +23,7 @@ class SaveProducts{
 	private $upcTable 	= [];
 	private $skusTable	= [];
 	public function __construct(array $data, Store $store){
+		// dd($data);
 		if(!isset($data[0])){
 			if(!isset($data['data']['list'])){
 				return $this->seterr('传入数据格式错误,不是一个数组或者没有 data 的 key');
@@ -176,8 +177,9 @@ class SaveProducts{
 	private function updateSku(Sku $dbrow, $quality, $status, $proid){
 		$cansave 	= false;
 		if($dbrow->stocks != $quality){
-			$dbrow->stocks 	= $quality;
-			$cansave 		= true;
+			$dbrow->stocks 			= $quality;
+			$dbrow->stockupdate 	= time();
+			$cansave 				= true;
 		}
 		if($dbrow->status != $status){
 			$dbrow->status 	= $status;

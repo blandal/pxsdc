@@ -3,6 +3,8 @@
 namespace App\Admin\Controllers;
 
 use App\Models\Sku;
+use App\Models\Platform;
+use App\Models\Store;
 use Encore\Admin\Controllers\AdminController;
 use Encore\Admin\Form;
 use Encore\Admin\Grid;
@@ -26,9 +28,12 @@ class SkuController extends AdminController
     {
         $grid = new Grid(new Sku());
 
+        $platforms  = Platform::pluck('name', 'id')->toArray();
+        $stores     = Store::pluck('title', 'store_id')->toArray();
+
         $grid->column('id', __('编号'));
-        $grid->column('platform', __('平台'));
-        $grid->column('store_id', __('店铺'));
+        $grid->column('platform', __('平台'))->filter($platforms)->using($platforms);
+        $grid->column('store_id', __('店铺'))->filter($stores)->using($stores);
         // $grid->column('images', __('店铺'))->display(function(){
         //     return $this->pro->images;
         // })->image(60,60);

@@ -40,9 +40,9 @@ class ProductSku extends Model{
                 if($needchange){
                     $rsp    = $needchange->store->getInstances()->changeStock($val, $needchange);
                     if($needchange->params){
-
+                        $params     = json_decode($needchange->params, true);
+                        // $params['']
                     }
-                    $params     = $needchange->params ? json_decode($needchange->params);
                     if($rsp == true){
                         self::where('id', $bindid)->update(['stocks' => $val]);
                     }else{

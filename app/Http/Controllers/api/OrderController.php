@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Store;
 use App\Models\ProductSku;
+use App\Models\Sku;
 
 class OrderController extends Controller{
     public function fmtdata($data){
@@ -21,6 +22,10 @@ class OrderController extends Controller{
             $data   = json_encode($data, JSON_UNESCAPED_UNICODE);
         }
     }
+
+    /**
+     * 通过其他方获得的订单数据,此接口仅保存订单数据和操作库存修改
+     */
     public function orders(Request $request){
         set_time_limit(0);
         $platform   = (int)$request->post('platform');
@@ -58,12 +63,14 @@ class OrderController extends Controller{
 
         // try {
             $instance   = Store::getInstance($storeid, $platform);//where('store_id', $storeid)->where('platform_id', $platform)->first();
-            $newOps     = $instance->saveOrders($list);
-            if(empty($newOps)){
+            $orderids   = $instance->saveOrders($list);
+            if(empty($orderids)){
                 $errs   = $instance->errs() ? implode("<br>\r\n", $instance->errs()) : '添加为空!';
                 return $this->error($errs);
             }
-            ProductSku::newOrderForChangeStocks($newOps);
+            // dd($newOps);
+            // ProductSku::newOrderForChangeStocks($newOps);
+            Sku::updateFromPlatformOrders($orderids, $platform, $storeid);
             return $this->success(null, '成功!');
         // } catch (\Exception $e) {
         //     return $this->error($e->getMessage());

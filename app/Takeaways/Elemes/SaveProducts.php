@@ -88,14 +88,16 @@ class SaveProducts{
 				'customid'	=> $row['outId'],
 				'other'		=> '',
 				'status'	=> $row['status'],
+				'isWeight'	=> $row['itemWeight'],
+				'weightType'=> $row['weightType'],
 			];
 			if($row['hasSku'] == true){
 				foreach($row['itemSkuList'] as $item){
 					if(isset($skus[$spu_id][$item['itemSkuId']])){
-						$this->updateSku($skus[$spu_id][$item['itemSkuId']], $item['quantity'], $row['status'], $proid);
+						$this->updateSku($skus[$spu_id][$item['itemSkuId']], $item['quantity'], $row['status'], $proid, json_encode($item, JSON_UNESCAPED_UNICODE));
 					}else{
 						$tmp 	= $skuarr;
-						$tmp['other']	= is_array($item['salePropertyList']) ? json_encode($item['salePropertyList'], JSON_UNESCAPED_UNICODE) : $item['salePropertyList'];
+						$tmp['other']	= json_encode($item, JSON_UNESCAPED_UNICODE);
 						$tmp['sku_id']	= $item['itemSkuId'];
 						$tmp['price']	= $item['price'];
 						$tmp['weight']	= $item['itemWeight'];
@@ -144,11 +146,12 @@ class SaveProducts{
 	/**
 	 * 更新sku,目前仅支持更新库存和状态
 	 */
-	private function updateSku(Sku $dbrow, $quality, $status, $proid){
+	private function updateSku(Sku $dbrow, $quality, $status, $proid, $other = null){
 		$cansave 	= false;
 		if($dbrow->stocks != $quality){
-			$dbrow->stocks 	= $quality;
-			$cansave 		= true;
+			$dbrow->stocks 			= $quality;
+			$dbrow->stockupdate 	= time();
+			$cansave 				= true;
 		}
 		if($dbrow->status != $status){
 			$dbrow->status 	= $status;
@@ -157,6 +160,12 @@ class SaveProducts{
 		if($dbrow->pro_id != $proid){
 			$dbrow->pro_id 	= $proid;
 			$cansave 		= true;
+		}
+		if($other){
+			if(md5($other) != md5($dbrow->other)){
+				$dbrow->other 	= $other;
+				$cansave 		= true;
+			}
 		}
 		if($cansave){
 			$dbrow->save();

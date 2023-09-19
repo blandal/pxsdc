@@ -17,4 +17,6 @@ Route::group([
     $router->resource('product-skus', BindSkuController::class);
     $router->resource('pros', ProController::class);
     $router->resource('skus', SkuController::class);
+
+    $router->post('syncstocks', 'ProController@syncstocks')->name('syncstocks');
 });

@@ -13,6 +13,7 @@ use App\Models\Product;
 use App\Models\ProductSkuBind;
 use App\Models\Sku;
 use App\Models\Pro;
+use Illuminate\Support\Facades\Log;
 
 class ProductController extends Controller{
     public function index(Request $request){//通过api上传数据同步
@@ -53,10 +54,13 @@ class ProductController extends Controller{
      */
     public function getindex(Request $request){//批量拉取平台同步
         // dd(ProductSku::bind());
-        // $row    = ProductSku::find(9998);
-        // $row->stocks    = 2;
-        // $row->save();
+        // $row    = Sku::find(11754);
+        // $row->changeStock(-2, '测试', 0, 0);
+        // // $row->stocks    = 2;
+        // // $row->save();
         // dd('----');
+        // Log::error('修改库存失败');
+        // dd('werwer');
 
         $platform       = (int)$request->post('platform', 0);
         $storeid        = (int)$request->post('store_id', 0);
@@ -187,7 +191,7 @@ class ProductController extends Controller{
         return view('elesign', ['ts' =>$timestamps, 'data' => $data]);
     }
 
-    public function autolink(){//临时解决方案
+    public function autolink(){//临时解决方案.将不同平台的相同 sku 进行绑定关联
         set_time_limit(0);
         $allcount   = 0;
         foreach(Pro::get() as $item){
@@ -204,12 +208,16 @@ class ProductController extends Controller{
                 $skus[1]->bind    = $this->bds($skus[1]->bind, $skus[0]->id);
                 $skus[1]->save();
                 $allcount       += 2;
+                if($item->err == 1){
+                    $item->err  = 0;
+                    $item->save();
+                }
             }else{
                 $allbind        = true;
                 foreach($skus as $val){
                     $binded     = false;
                     foreach($skus as $res){
-                        if($val->name == $res->name && $val->store_id != $res->store_id){
+                        if(($val->name == $res->name || $val->upc == $res->upc) && $val->store_id != $res->store_id){// || $val->upc == $res->upc
                             $val->bind  = $this->bds( $val->bind, $res->id);
                             $val->save();
                             $binded     = true;
@@ -222,6 +230,9 @@ class ProductController extends Controller{
                 }
                 if($allbind == false){
                     $item->err  = 1;
+                    $item->save();
+                }elseif($item->err == 1){
+                    $item->err  = 0;
                     $item->save();
                 }
             }
@@ -271,7 +282,7 @@ class ProductController extends Controller{
         return implode(',', $o);
     }
 
-    public function upccheck(){
+    public function upccheck(){//检查upc是否错误
         set_time_limit(0);
         $allcount   = 0;
         $pltsCount  = 2;//店铺数量
@@ -286,27 +297,15 @@ class ProductController extends Controller{
                 continue;
             }
             $upcArr     = $skus->pluck('upc', 'upc')->toArray();
-            // dd(in_array(null, $upcArr), $upcArr);
             if(in_array(null, $upcArr)){
                 $item->upcerr   = 1;
                 $item->save();
                 continue;
             }
-            $storeUpc   = $skus->pluck('upc', 'store_id')->toArray();
-            // dd($storeUpc);
-            
-            // foreach($skus as $val){
-            //     if(!$val->upc){
-            //         $iserr  = true;
-            //         break;   
-            //     }
-            //     $upcs[$val->store_id][$val->upc]    = $val;
-            // }
-            // if($iserr == true){
-            //     $item->upcerr   = 1;
-            //     $item->save();
-            //     continue;
-            // }
+            if($item->upcerr == 1){
+                $item->upcerr   = 0;
+                $item->save();
+            }
         }
         return $this->success();
     }

@@ -5,10 +5,12 @@ use App\Models\Order;
 use App\Models\Store;
 use App\Models\Platform;
 use App\Models\ProductSku;
+use App\Models\Sku;
 use App\Models\OrderProduct;
 use Illuminate\Support\Facades\DB;
 use App\Takeaways\Eleme;
 use App\Takeaways\BaseFactory;
+use Illuminate\Support\Facades\Log;
 class SaveOrders extends Eleme{
 	use BaseFactory;
 	private $changeStatus 	= 10;
@@ -55,13 +57,13 @@ class SaveOrders extends Eleme{
 							$skulessStocks[$item['itemSkuId']] 	+= $item['quantity'];
 						}
 					}
-					$ps 	= ProductSku::whereIn('itemSkuId', array_keys($skulessStocks))
-										->where('platform_id', $this->store->platform->id)
-										->where('storeId', $this->store->store_id)->get();
+					$ps 	= Sku::whereIn('sku_id', array_keys($skulessStocks))
+										->where('platform', $this->store->platform->id)
+										->where('store_id', $this->store->store_id)->get();
 
 					foreach($ps as $item){
-						if(isset($skulessStocks[$item->itemSkuId])){
-							$stock 			= $skulessStocks[$item->itemSkuId];
+						if(isset($skulessStocks[$item->sku_id])){
+							$stock 			= $skulessStocks[$item->sku_id];
 							if($stock < 0){
 								$stock 		= 0;
 							}
@@ -70,30 +72,44 @@ class SaveOrders extends Eleme{
 					}
 				}
 			}, 3);
+			$platform_order_ids 	= array_keys($this->addOrder);
+			Log::info('订单id: ' . implode(',', $platform_order_ids));
 		}
-		return $this->opIds;
+		return $platform_order_ids;
 	}
 
 	/**
 	 * 处理一行的数据
 	 */
 	private function fmtrow($row){
-		if(!isset($row['orderDetailBizDTO'], $row['orderDetailGoodsDTO'], $row['orderDetailGoodsDTO'])){//22是退单待审核, 25是取消
+		if(!isset($row['orderDetailBizDTO'], $row['orderDetailGoodsDTO'], $row['orderDetailGoodsDTO'])){
 			return $this->seterr('订单 orderDetailBizDTO, orderDetailGoodsDTO 和 orderDetailGoodsDTO 不存在!');
 		}
 		$base 		= $row['orderDetailBizDTO'];
 		$orderid 	= $base['orderId'];
 		$status 			= $base['status'];
+		if($status == $this->changeStatus){//10是取消订单,订单取消需要加库存
+			$res 	= OrderProduct::where('order_id', $orderid)->get();
+			if($res){
+				Log::info('饿了么订单编号[' . $orderid . ']: 用户取消,执行退回库存!');
+				foreach($res as $item){//逐个商品退回库存
+					$item->rebackStocks();
+				}
+			}
+		}
 		$orderStatusDesc 	= $base['statusDesc'];
 		$store_id 	= $this->store->store_id;
 		$itemcount 	= $row['orderDetailGoodsDTO']['goodsTotalNum'];
 		$createTime = strtotime($base['createTime']);
 		$platform_id=$this->store->platform->id;
 
+		$tableSkuIds 	= [];
 		if(isset($this->dbOrders[$orderid])){
-			if($status == $this->changeStatus && $dbOrders[$orderid]->orderStatus != $status){//如果退单,则要同步加库存
-				$dbOrders[$orderid]->orderStatus 	= -1;
-				$dbOrders[$orderid]->save();
+			if($status == $this->changeStatus && $this->dbOrders[$orderid]->orderStatus != $status){//如果退单,则要同步加库存
+				$this->dbOrders[$orderid]->orderStatus 		= -1;
+				$this->dbOrders[$orderid]->orderStatusDesc 	= $orderStatusDesc;
+				$this->dbOrders[$orderid]->origin_content	= json_encode($row, JSON_UNESCAPED_UNICODE);
+				$this->dbOrders[$orderid]->save();
 			}
 		}else{//新订单
 			if($status != $this->changeStatus){//如果订单不是取消单,则需要同步扣除库存
@@ -107,9 +123,21 @@ class SaveOrders extends Eleme{
 					// 'orderId_tm'		=> $row['orderId'],
 					'platform_id'		=> $platform_id,
 					'addtime'			=> time(),
+					'origin_content'	=> json_encode($row, JSON_UNESCAPED_UNICODE),
 				];
 
 				foreach($row['orderDetailGoodsDTO']['goodsList'] as $item){
+					$skuid 				= $item['skuId'] ?? $item['itemId'];
+					$skuTableId 		= 0;
+					if(isset($tableSkuIds[$skuid])){
+						$skuTableId 	= $tableSkuIds[$skuid];
+					}else{
+						$row 			= Sku::where('sku_id', $skuid)->where('platform', $platform_id)->where('store_id', $store_id)->first();
+						if($row){
+							$tableSkuIds[$skuid] 	= $row->id;
+							$skuTableId 			= $row->id;
+						}
+					}
 					$this->addOp[] 		= [
 						'order_id'			=> $orderid,
 						'sku_id'			=> $item['ext']['storeAttr']['skuId'],
@@ -122,33 +150,10 @@ class SaveOrders extends Eleme{
 						'customSkuId'		=> $item['ext']['extCode'],
 						'platform_id'		=> $platform_id,
 						'itemSkuId'			=> $item['skuId'] ?? $item['itemId'],
+						'sku_table_id'		=> $skuTableId,
+						'createtime'		=> $createTime,
 					];
 				}
-				// if(isset($this->stores[$store_id])){
-				// 	$orderProducts 		= json_decode($this->stores[$store_id]['oob']->orderProducts($orderid), true);
-				// 	if(!isset($orderProducts['data']['itemInfo'])){
-				// 		return $this->seterr($orderid . ' 获取商品详情失败!');
-				// 	}
-				// 	try {
-				// 		foreach($orderProducts['data']['itemInfo'] as $item){
-				// 			$this->addOp[] 		= [
-				// 				'order_id'			=> $orderid,
-				// 				'sku_id'			=> $item['sku'],
-				// 				'orderItemId'		=> $item['orderItemId'],
-				// 				'quantity'			=> $item['orderQuantity'],
-				// 				'upc'				=> $item['upc'],
-				// 				'storeId'			=> $store_id,
-				// 				'spec'				=> $item['spec'],
-				// 				'title'				=> $item['skuName'],
-				// 				'customSkuId'		=> $item['customSkuId'],
-				// 			];
-				// 		}
-				// 	} catch (\Exception $e) {
-				// 		return $this->seterr($e->getMessage());
-				// 	}
-				// }else{
-				// 	return $this->seterr($store_id . ' 实例化失败!');
-				// }
 			}
 		}
 	}
