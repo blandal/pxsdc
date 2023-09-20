@@ -11,6 +11,7 @@ use App\Models\Store;
 
 use App\Models\Pro;
 use App\Models\Sku;
+use Illuminate\Support\Facades\Log;
 
 use App\Takeaways\BaseFactory;
 class SaveProducts{
@@ -25,6 +26,7 @@ class SaveProducts{
 	private $dbskus 	= [];
 	private $skus 		= [];
 	private $dbupcs 	= [];
+	public $nums 		= 0;
 	public function __construct(array $data, Store $store){
 		$this->store 		= $store;
 		$this->platform 	= $store->platform->id;
@@ -50,10 +52,9 @@ class SaveProducts{
 			$skus[$item->spu_id][$item->sku_id] 	= $item;
 		}
 
-		$num 			= 0;
 		$waitAdd 		= [];
 		foreach($data as $row){
-			$num++;
+			$this->nums++;
 			$title 		= $row['title'];
 			$cate1 		= $row['customCategoryParentName'];
 			$cate2		= $row['customCategoryName'];
@@ -118,7 +119,7 @@ class SaveProducts{
 			}
 		}
 		Sku::insert($waitAdd);
-		return $num;
+		return $this->nums;
 
 
 
@@ -226,15 +227,23 @@ class SaveProducts{
 	}
 
 	public function render(){
-		if($this->status === true){
-			if(!empty($this->addSpus)){
-				ProductSpu::insert($this->addSpus);
-			}
-			if(!empty($this->addSkus)){
-				ProductSku::insert($this->addSkus);
-			}
+		// dd($this->status);
+		// if($this->status === true){
+		// 	if(!empty($this->addSpus)){
+		// 		ProductSpu::insert($this->addSpus);
+		// 	}
+		// 	if(!empty($this->addSkus)){
+		// 		ProductSku::insert($this->addSkus);
+		// 	}
+		// }
+
+		if($this->status == false){
+			// dd($this->errmsg);
+			Log::error('饿了么商品同步失败: ' . implode('---', $this->errmsg));
+			return false;
 		}
-		return $this->status;
+		return $this->nums;
+		// return $this->status == true ? $this->nums : false;
 	}
 
 	/**

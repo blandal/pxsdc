@@ -32,7 +32,7 @@ class Sku extends Model{
      * @param $type     int     更新方式, 0-仅更新当前平台, 1-仅更新其他平台, 2-所有平台都更新
      * @param $isval    bool    是否直接设置为 val 的值
      */
-    public function changeStock(int $val, string $remark, int $admin_id, int $type, int $createtime = 0, bool $isval = false){//需要记录日志
+    public function changeStock(int $val, string $remark, int $admin_id, int $type, int $createtime = 0, bool $isval = false, $orderid = null){//需要记录日志
         if(strpos($this->bind, ',') !== false){//如果闪仓店铺接入，不能用这种方式判断
             // dd('修改的sku 绑定有问题!');
             return false;
@@ -99,6 +99,7 @@ class Sku extends Model{
                 'skuids'    => implode(',', $insertSkuIds),
                 'content'   => implode(',', $content),
                 'take_time' => ($end-$start)*1000,
+                'order_id'  => $orderid,
             ]);
         }
         return true;
@@ -123,7 +124,7 @@ class Sku extends Model{
                 continue;
             }
             $skuRow     = $skusArr[$item->sku_table_id];
-            $res        = $skuRow->changeStock($item->quantity, $platform_id . ':' . $store_id . ' - 订单自动同步.', 0, 1, $item->createtime);
+            $res        = $skuRow->changeStock($item->quantity, $platform_id . ':' . $store_id . ' - 订单自动同步.', 0, 1, $item->createtime, false, $item->order_id);
             if($res){
                 $item->sync     = 1;
                 $item->save();

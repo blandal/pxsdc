@@ -8,6 +8,7 @@ use App\Models\Store;
 use App\Models\Pro;
 use App\Models\Sku;
 use App\Takeaways\BaseFactory;
+use Illuminate\Support\Facades\Log;
 class SaveProducts{
 	use BaseFactory;
 	// private $status 	= true;
@@ -22,6 +23,7 @@ class SaveProducts{
 	private $addSkus 	= [];
 	private $upcTable 	= [];
 	private $skusTable	= [];
+	public $nums 		= 0;
 	public function __construct(array $data, Store $store){
 		// dd($data);
 		if(!isset($data[0])){
@@ -54,10 +56,9 @@ class SaveProducts{
 			$skus[$item->sku_id] 	= $item;
 		}
 
-		$num 			= 0;
 		$waitAdd 		= [];
 		foreach($data as $row){
-			$num++;
+			$this->nums++;
 			$title 		= $row['name'];
 			// if(strpos($title, '高弹加大可调节孕妇立体托腹包芯丝孕妇裤 1条') !== false){
 			// 	dd($row, $skus);
@@ -124,7 +125,7 @@ class SaveProducts{
 			}
 		}
 		Sku::insert($waitAdd);
-		return $num;
+		return $this->nums;
 
 
 
@@ -198,56 +199,11 @@ class SaveProducts{
 	}
 
 	public function render(){
-		if($this->status === true){
-			try {
-				if(!empty($this->addSpus)){
-					ProductSpu::insert($this->addSpus);
-				}
-				if(!empty($this->addSkus)){
-					ProductSku::insert($this->addSkus);
-				}
-			} catch (\Exception $e) {
-				dd($e->getMessage(), $this->addSpus, $this->skusTable, $this->addSkus);
-			}
-			
-			// $addstore 	= array_diff_key($this->addStores, $this->dbstore);
-			// if(!empty($addstore)){
-			// 	Store::insert($addstore);
-			// }
-
-			// $spus 			= array_keys($this->addBases);
-			// $skus 			= array_keys($this->addSkus);
-			// $dbProducts 	= Product::whereIn('spu', $spus)->pluck('id', 'spu')->toArray();
-			// $diff 			= array_diff_key($this->addBases, $dbProducts);
-			// if(!empty($diff)){
-			// 	Product::insert($diff);
-			// 	$dbProducts 	= Product::whereIn('spu', $spus)->pluck('id', 'spu')->toArray();
-			// }
-
-			// $dbSpus 	= ProductSpu::where('platform_id', $this->platform)->whereIn('spu_id', $spus)->pluck('product_id', 'spu_id')->toArray();
-			// $diff 		= array_diff_key($this->addSpus, $dbSpus);
-			// if(!empty($diff)){
-			// 	foreach($diff as &$item){
-			// 		$item['product_id']		= $dbProducts[$item['spu_id']] ?? 0;
-			// 	}
-			// 	try {
-			// 		ProductSpu::insert($diff);
-			// 	} catch (\Exception $e) {
-			// 		dd($e->getMessage(), $diff);
-			// 	}
-			// }
-
-			// $dbSkus 	= ProductSku::where('platform_id', $this->platform)->whereIn('sku_id', $skus)->pluck('sku_id', 'sku_id')->toArray();
-			// $diff 		= array_diff_key($this->addSkus, $dbSkus);
-			// if(!empty($diff)){
-			// 	foreach($diff as &$item){
-			// 		$item['product_id']		= $dbProducts[$item['spu_id']] ?? 0;
-			// 	}
-			// 	// dd($this->addSkus, $diff, '-----');
-			// 	ProductSku::insert($diff);
-			// }
+		if($this->status == false){
+			Log::error('美团商品同步失败: ' . implode('---', $this->errmsg));
+			return false;
 		}
-		return $this->status;
+		return $this->nums;
 	}
 
 	/**

@@ -47,11 +47,12 @@ class Meituan implements Factory{
         if(!$data){
             return '产品数据解析失败! ' . $content;
         }
-        if(!Product::saveProduct($data, $this)){
+        $nums 		= Product::saveProduct($data, $this);
+        if($nums === false){
             return implode("\r\n", $this->errs());
         }
         if(isset($data['code']) && $data['code'] == 0){
-            return true;
+            return $nums;
         }
         return $data['msg'] ?? '错误!';
 	}
@@ -232,7 +233,7 @@ class Meituan implements Factory{
 	 * @param $data 	平台返回的商品列表
 	 * @return bool
 	 */
-	public function saveProducts(array $data) :bool{
+	public function saveProducts(array $data){
 		$this->method 	= new \App\Takeaways\Meituans\SaveProducts($data, $this->store);
 		return $this->method->render();
 	}

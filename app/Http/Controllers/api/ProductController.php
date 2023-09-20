@@ -64,7 +64,10 @@ class ProductController extends Controller{
         while(true){
             try {
                 $nums   = $instance->getProducts($page, $pagesize);
-                if($nums <= 0 || $nums < $pagesize){
+                if(!is_numeric($nums)){
+                    return $this->error($nums);
+                }
+                if(!$nums || $nums < $pagesize){
                     return $this->success('商品自动同步结束!');
                 }
             } catch (\Exception $e) {
@@ -72,7 +75,6 @@ class ProductController extends Controller{
                 return $this->error($e->getMessage());
             }
             $page++;
-            sleep(rand(1,2));
         }
     }
 
