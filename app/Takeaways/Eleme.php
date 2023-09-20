@@ -98,7 +98,7 @@ class Eleme implements Factory{
         return $data['msg'] ?? '错误!';
 	}
 
-	public function getProductRow(Sku $sku){
+	public function getProductRow(Sku $sku){//同步单个产品
 		$this->method 	= (new \App\Takeaways\Elemes\GetProductRow())
 				->sellerId($this->store->sellerId)
 				->storeIds_0($this->store->store_id)
@@ -140,8 +140,8 @@ class Eleme implements Factory{
 				'status'	=> $row['status'],
 				'isWeight'	=> $row['isWeight'],
 				'weightType'=> $row['weightType'],
-				'bind'		=> $sku->bind,
-				'byhum'		=> $sku->byhum,
+				'bind'		=> null,
+				'byhum'		=> null,
 				'stockupdate'	=> time(),
 			];
 			if($row['hasSku'] == true){
@@ -172,6 +172,10 @@ class Eleme implements Factory{
 						$tmp['upc']		= $item['barcode'];
 						$tmp['customid']= $item['skuOuterId'];
 						$tmp['name']	= $item['salePropertyList'][0]['valueText'];
+						if($sku->upc == $upc){
+							$tmp['bind']	= $sku->bind;
+							$tmp['byhum']	= $sku->byhum;
+						}
 						$waitAdd[] 	= $tmp;
 					}
 				}
@@ -193,7 +197,12 @@ class Eleme implements Factory{
 					$rrr->stockupdate 	= time();
 					$rrr->save();
 				}else{
-					$waitAdd[] 	= $skuarr;
+					$tmp 		= $skuarr;
+					if($sku->upc == $upc){
+						$tmp['bind']	= $sku->bind;
+						$tmp['byhum']	= $sku->byhum;
+					}
+					$waitAdd[] 	= $tmp;
 				}
 			}
 			if(!empty($waitAdd)){

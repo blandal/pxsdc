@@ -175,7 +175,7 @@ class Sku extends Model{
     }
 
     public function syncMe(){//同步此sku信息
-        if($this->platform == 1) return false;
+        // if($this->platform == 2) return false;
         $this->instance()->getProductRow($this);
     }
 

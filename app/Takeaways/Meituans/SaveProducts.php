@@ -63,7 +63,7 @@ class SaveProducts{
 			$cate1 				= '';
 			$cate2 				= '';
 			if(isset($row['channelSpuList'][0]['frontCategories'][0]['frontCategoryNamePath'])){
-				$tmp 			= explode('>', $row['channelSpuList'][0]['frontCategories'][0]['frontCategoryNamePath']);
+				$tmp 			= explode('>', html_entity_decode($row['channelSpuList'][0]['frontCategories'][0]['frontCategoryNamePath']));
 				$cate1 			= $tmp[0];
 				$cate2 			= $tmp[1] ?? '';
 			}

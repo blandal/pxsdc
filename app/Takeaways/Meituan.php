@@ -56,6 +56,97 @@ class Meituan implements Factory{
         return $data['msg'] ?? '错误!';
 	}
 
+	public function getProductRow(Sku $sku){//同步单个产品
+		$this->method 	= (new \App\Takeaways\Meituans\GetProductRow())
+				->poiId($sku->store_id)
+				->skuIdList__0($sku->sku_id);
+		$resp 			= $this();
+		$arr 			= json_decode($resp, true);
+		if(!$arr){
+			Log::error('[美团]同步失败!' . $resp);
+			return false;
+		}
+
+		$waitAdd 		= [];
+		if(isset($arr['data']['list'][0])){
+			$row 		= $arr['data']['list'][0];
+			$tmp 		= Sku::where('pro_id', $sku->pro_id)->where('platform', $sku->platform)->where('store_id', $sku->store_id)->get();
+			$originSkus	= [];
+			foreach($tmp as $item){
+				$originSkus[$item->sku_id] 	= $item;
+			}
+
+			$cate1 				= '';
+			$cate2 				= '';
+			if(isset($row['channelSpuList'][0]['frontCategories'][0]['frontCategoryNamePath'])){
+				$tmp 			= explode('>', html_entity_decode($row['channelSpuList'][0]['frontCategories'][0]['frontCategoryNamePath']));
+				$cate1 			= $tmp[0];
+				$cate2 			= $tmp[1] ?? '';
+			}
+
+			$skku 				= [];
+			foreach($row['channelSpu']['channelSkuList'] as $item){
+				$tmpsku 		= $item['skuId'];
+				$skku[$tmpsku] 	= [
+					'price'		=> $item['price'],
+					'stocks'	=> $item['stock'],
+					'customid'	=> $item['customSkuId'],
+				];
+			}
+
+			$title 				= $row['name'];
+			foreach($row['storeSkuList'] as $item){
+				$skuid 		= $item['skuId'];
+				if(isset($originSkus[$skuid])){
+					$skuRow 	= $originSkus[$skuid];
+					unset($originSkus[$skuid]);
+					$skuRow->upc 		= $item['upc'];
+					$skuRow->weight 	= $item['weight'];
+					$skuRow->title 		= $title;
+					$skuRow->name 		= $item['spec'];
+					$skuRow->status 	= $row['status'];
+					if(isset($skku[$skuid])){
+						foreach($skku[$skuid] as $k => $v){
+							$skuRow->{$k} 	= $v;
+						}
+					}
+					$skuRow->stockupdate 	= time();
+					$skuRow->save();
+				}else{
+					$tmp 	= [
+						'platform'	=> $sku->platform,
+						'store_id'	=> $sku->store_id,
+						'sku_id'	=> $skuid,
+						'pro_id'	=> $sku->pro_id,
+						'spu_id'	=> $sku->pro_id,
+						'price'		=> $skku[$skuid]['price'] ?? 0,
+						'stocks'	=> $skku[$skuid]['stocks'] ?? 0,
+						'upc'		=> $item['upc'],
+						'weight'	=> $item['weight'],
+						'title'		=> $title,
+						'name'		=> $item['spec'],
+						'customid'	=> $skku[$skuid]['customid'] ?? null,
+						'status'	=> $row['status'],
+						'stockupdate'	=> time(),
+					];
+					$waitAdd[] 	= $tmp;
+				}
+			}
+			if(!empty($waitAdd)){
+				Sku::insert($waitAdd);
+			}
+			if(!empty($originSkus)){
+				foreach($originSkus as $item){
+					$item->delete();
+				}
+			}
+		}else{
+			$msg 		= $arr['msg'] ?? '返回错误!';
+			Log::error('[美团]同步商品:' . $msg);
+			return $msg;
+		}
+	}
+
 	/**
 	 * 获取订单列表
 	 */
@@ -126,6 +217,7 @@ class Meituan implements Factory{
 			'User-Agent'    => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36',
 		];
 		$url 		= $this->domain . ltrim($this->method->uri, '/');
+		// dd($url, $this->method->args, $headers);
 		if($this->method->method == 'get'){
 			$resp 	= $q->get($url, $this->method->args, ['headers' => $headers]);
 		}else{
