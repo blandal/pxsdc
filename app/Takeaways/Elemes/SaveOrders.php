@@ -73,7 +73,7 @@ class SaveOrders extends Eleme{
 				}
 			}, 3);
 			$platform_order_ids 	= array_keys($this->addOrder);
-			Log::info('订单id: ' . implode(',', $platform_order_ids));
+			Log::info('订单id: ' . ($platform_order_ids ? implode(',', $platform_order_ids) : '本次没有新订单插入!'));
 		}
 		return $platform_order_ids;
 	}
