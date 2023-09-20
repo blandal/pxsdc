@@ -50,9 +50,10 @@ class SaveProducts{
 			$skus[$item->spu_id][$item->sku_id] 	= $item;
 		}
 
-
+		$num 			= 0;
 		$waitAdd 		= [];
 		foreach($data as $row){
+			$num++;
 			$title 		= $row['title'];
 			$cate1 		= $row['customCategoryParentName'];
 			$cate2		= $row['customCategoryName'];
@@ -117,7 +118,7 @@ class SaveProducts{
 			}
 		}
 		Sku::insert($waitAdd);
-		return true;
+		return $num;
 
 
 

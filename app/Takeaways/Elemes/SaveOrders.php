@@ -87,7 +87,7 @@ class SaveOrders extends Eleme{
 		}
 		$base 		= $row['orderDetailBizDTO'];
 		$orderid 	= $base['orderId'];
-		$status 			= $base['status'];
+		$status 	= $base['status'];
 		if($status == $this->changeStatus){//10是取消订单,订单取消需要加库存
 			$res 	= OrderProduct::where('order_id', $orderid)->get();
 			if($res){

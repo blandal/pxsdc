@@ -53,48 +53,27 @@ class ProductController extends Controller{
      * 获取商品列表
      */
     public function getindex(Request $request){//批量拉取平台同步
-        // dd(ProductSku::bind());
-        // $row    = Sku::find(11754);
-        // $row->changeStock(-2, '测试', 0, 0);
-        // // $row->stocks    = 2;
-        // // $row->save();
-        // dd('----');
-        // Log::error('修改库存失败');
-        // dd('werwer');
-
         $platform       = (int)$request->post('platform', 0);
         $storeid        = (int)$request->post('store_id', 0);
         $page           = (int)$request->post('page', 1);
         $pagesize       = (int)$request->post('limit', 20);
         $maxpage        = (int)$request->post('maxpage', 20);
 
-        // if($platform < 1 || $storeid < 1){
-        //     return $this->error('参数不完整!');
-        // }
-        // $row            = Store::where('store_id', $storeid)->where('platform_id', $platform)->first();
-        // if(!$row){
-        //     return $this->error('不存在!');
-        // }
-        // if(!$row->cookie){
-        //     return $this->error('商店未登录!');
-        // }
-        // if(!$row->platform || !$row->platform->object){
-        //     return $this->error('平台方法未定义!');
-        // }
-
         $instance       = Store::getInstance($storeid, $platform);//new $row->platform->object($row, $row->cookie);
         set_time_limit(0);
-        // try {
-            for(;$page <= $maxpage; $page++){
-                $res            = $instance->getProducts($page, $pagesize);
+        while(true){
+            try {
+                $nums   = $instance->getProducts($page, $pagesize);
+                if($nums <= 0 || $nums < $pagesize){
+                    return $this->success('商品自动同步结束!');
+                }
+            } catch (\Exception $e) {
+                Log::error($platform . ' - ' . $storeid . ' 同步商品错误!' . $e->getMessage());
+                return $this->error($e->getMessage());
             }
-            if($res === true){
-                return $this->success('成功!');
-            }
-            return $this->error($res);
-        // } catch (\Exception $e) {
-        //     return $this->error('Exception: ' . $e->getMessage());   
-        // }
+            $page++;
+            sleep(rand(1,3));
+        }
     }
 
     /**
@@ -105,17 +84,7 @@ class ProductController extends Controller{
      * @param pagesize  页面大小
      */
     public function getorders(Request $request){
-        // $od     = Order::find(7);
-        // $od->status = -1;
-        // try {
-        //     $od->save();
-        // } catch (\Exception $e) {
-        //     dd($e->getMessage());
-        // }
-        // $od->save();
-        // dd('1212122');
-
-
+        return $this->error('此功能暂时不开发!');
         $platform       = (int)$request->get('platform', 0);
         $storeid        = (int)$request->get('store_id', 0);
         $page           = (int)$request->get('page', 1);
@@ -139,30 +108,6 @@ class ProductController extends Controller{
                 $last   = Order::select('orderid', 'store_id', 'platform_id', 'status')->where('platform_id', $platform)->where('store_id', $storeid)->orderByDesc('id')->first();
                 return $this->success($last, '成功!');
             }
-        // } catch (\Exception $e) {
-        //     return $this->error($e->getMessage());
-        // }
-        // $row            = Store::where('store_id', $storeid)->where('platform_id', $platform)->first();
-        // if(!$row){
-        //     return $this->error('不存在!');
-        // }
-        // if(!$row->cookie){
-        //     return $this->error('商店未登录!');
-        // }
-        // if(!$row->platform || !$row->platform->object){
-        //     return $this->error('平台方法未定义!');
-        // }
-
-        // $instance       = new $row->platform->object($row);
-        // $res            = $instance->getOrders($page, $pagesize);
-        // $data           = json_decode($res, true);
-        // if(!$data || !isset($data['code']) || $data['code'] != 0){
-        //     return $this->error('订单数据解析失败!', $res);
-        // }
-
-        // if(!Order::saveOrder($data, $instance, $row->platform->id)){
-        //     dd($instance->errs());
-        // }
     }
 
     private function checkPlatform(int $platform){
@@ -179,19 +124,8 @@ class ProductController extends Controller{
         return $plt;
     }
 
-    public function test(Request $request){
-        print_r($request->header('X-Ele-Eb-Token'));
-        echo "<br>\r\n";
-        print_r($request->get('appKey'));
-    }
-
-    public function elesign(Request $request){
-        $timestamps     = $request->get('t');
-        $data           = json_decode($request->get('data'), true);
-        return view('elesign', ['ts' =>$timestamps, 'data' => $data]);
-    }
-
     public function autolink(){//临时解决方案.将不同平台的相同 sku 进行绑定关联
+        return $this->error('功能暂未开放!');
         set_time_limit(0);
         $allcount   = 0;
         foreach(Pro::get() as $item){
@@ -260,8 +194,6 @@ class ProductController extends Controller{
                     $min        = min($product_ids);
                     ProductSku::where('upc', (string)$upc)->update(['product_id' => $min]);
                 }
-
-
 
                 $skuids         = array_flip(array_column($item, 'id'));
                 foreach($item as $zv){

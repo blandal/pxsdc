@@ -54,8 +54,10 @@ class SaveProducts{
 			$skus[$item->sku_id] 	= $item;
 		}
 
+		$num 			= 0;
 		$waitAdd 		= [];
 		foreach($data as $row){
+			$num++;
 			$title 		= $row['name'];
 			// if(strpos($title, '高弹加大可调节孕妇立体托腹包芯丝孕妇裤 1条') !== false){
 			// 	dd($row, $skus);
@@ -122,7 +124,7 @@ class SaveProducts{
 			}
 		}
 		Sku::insert($waitAdd);
-		return true;
+		return $num;
 
 
 

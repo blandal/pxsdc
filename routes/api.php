@@ -22,8 +22,7 @@ Route::get('/products', 'App\Http\Controllers\api\ProductController@getindex');
 Route::post('/products', 'App\Http\Controllers\api\ProductController@index');
 // Route::get('/orders', 'App\Http\Controllers\api\ProductController@getorders');
 Route::post('/orders', 'App\Http\Controllers\api\OrderController@orders');
-Route::get('/elesign', 'App\Http\Controllers\api\ProductController@elesign');
-Route::get('/test', 'App\Http\Controllers\api\ProductController@test');
+// Route::get('/test', 'App\Http\Controllers\api\ProductController@test');
 
 
 Route::get('/stocks2z', 'App\Http\Controllers\api\IndexController@stocks2z')->name('api.stocks2z');//将平台未关联上的产品库存设置未0

@@ -37,6 +37,7 @@ class Sku extends Model{
             // dd('修改的sku 绑定有问题!');
             return false;
         }
+        $start      = microtime(true);
         $binds      = explode(',', $this->bind);
         $binds      = array_flip(array_flip($binds));
         $mystore    = $this->store_id;
@@ -89,13 +90,17 @@ class Sku extends Model{
             $updatedStores[$item->store_id]     = $item->store_id;
             $updatedPaltforms[$item->platform]  = $item->platform;
         }
-        LogStock::insert([
-            'remark'    => $remark,
-            'addtime'   => time(),
-            'userid'    => $admin_id,
-            'skuids'    => implode(',', $insertSkuIds),
-            'content'   => implode(',', $content),
-        ]);
+        if(!empty($insertSkuIds)){
+            $end      = microtime(true);
+            LogStock::insert([
+                'remark'    => $remark,
+                'addtime'   => time(),
+                'userid'    => $admin_id,
+                'skuids'    => implode(',', $insertSkuIds),
+                'content'   => implode(',', $content),
+                'take_time' => ($end-$start)*1000,
+            ]);
+        }
         return true;
     }
 

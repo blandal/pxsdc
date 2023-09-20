@@ -9,6 +9,7 @@ use App\Models\ProductSku;
 use App\Models\Store;
 class IndexController extends Controller{
     public function stocks2z(Request $request){//将平台库存设置未0
+        return $this->error('功能暂未开放!');
         $platform   = $request->get('platform');
         $store      = $request->get('store');
         $page       = (int)$request->get('page', 1);
