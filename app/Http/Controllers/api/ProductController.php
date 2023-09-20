@@ -72,7 +72,7 @@ class ProductController extends Controller{
                 return $this->error($e->getMessage());
             }
             $page++;
-            sleep(rand(1,3));
+            sleep(rand(1,2));
         }
     }
 
