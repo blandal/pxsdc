@@ -88,7 +88,7 @@ class SaveProducts{
 				'customid'	=> $row['outId'],
 				'other'		=> '',
 				'status'	=> $row['status'],
-				'isWeight'	=> $row['itemWeight'],
+				'isWeight'	=> $row['isWeight'],
 				'weightType'=> $row['weightType'],
 			];
 			if($row['hasSku'] == true){

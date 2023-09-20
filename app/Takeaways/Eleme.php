@@ -98,6 +98,114 @@ class Eleme implements Factory{
         return $data['msg'] ?? '错误!';
 	}
 
+	public function getProductRow(Sku $sku){
+		$this->method 	= (new \App\Takeaways\Elemes\GetProductRow())
+				->sellerId($this->store->sellerId)
+				->storeIds_0($this->store->store_id)
+				->mixedBarCodeOrId($sku->upc);
+		$resp 			= $this();
+		$arr 			= json_decode($resp, true);
+		if(isset($arr['data']['data'][0])){
+			$row 		= $arr['data']['data'][0];
+			$title 		= $row['title'];
+			$cate1 		= $row['customCategoryParentName'];
+			$cate2		= $row['customCategoryName'];
+			$spu_id 	= $sku->spu_id;
+
+			$isMany 	= $sku->other ? true : false;//是否多sku判断
+			$originSkus	= [];
+			$waitAdd 	= [];
+			if($row['hasSku'] != $isMany){//如果产品的sku发生改变,则删除原有的sku并新增
+				Sku::where('pro_id', $sku->pro_id)->where('platform', $sku->platform)->where('store_id', $sku->store_id)->delete();
+			}else{
+				$tmp 	= Sku::where('pro_id', $sku->pro_id)->where('platform', $sku->platform)->where('store_id', $sku->store_id)->get();
+				foreach($tmp as $item){
+					$originSkus[$item->upc] 	= $item;
+				}
+			}
+			$skuarr 	= [
+				'platform'	=> $sku->platform,
+				'store_id'	=> $sku->store_id,
+				'sku_id'	=> $spu_id,
+				'pro_id'	=> $sku->pro_id,
+				'spu_id'	=> $spu_id,
+				'price'		=> $row['price'] ?? 0,
+				'stocks'	=> $row['quantity'],
+				'upc'		=> $row['barCode'],
+				'weight'	=> $row['itemWeight'],
+				'title'		=> $title,
+				'name'		=> '',
+				'customid'	=> $row['outId'],
+				'other'		=> '',
+				'status'	=> $row['status'],
+				'isWeight'	=> $row['isWeight'],
+				'weightType'=> $row['weightType'],
+				'bind'		=> $sku->bind,
+				'byhum'		=> $sku->byhum,
+				'stockupdate'	=> time(),
+			];
+			if($row['hasSku'] == true){
+				foreach($row['itemSkuList'] as $item){
+					$upc 	= $item['barcode'];
+					if(isset($originSkus[$upc])){
+						$rrr 	= $originSkus[$upc];
+						$rrr->title 	= $title;
+						$rrr->stocks 	= $item['quantity'];
+						$rrr->other 	= json_encode($item, JSON_UNESCAPED_UNICODE);
+						$rrr->sku_id 	= $item['itemSkuId'];
+						$rrr->isWeight 	= $row['isWeight'] ?? null;
+						$rrr->weightType= $row['weightType'];
+						$rrr->status 	= $row['status'];
+						$rrr->customid 	= $item['skuOuterId'];
+						$rrr->price 	= $item['price'];
+						$rrr->name 		= $item['salePropertyList'][0]['valueText'];
+						$rrr->weight 	= $item['itemWeight'];
+						$rrr->stockupdate 	= time();
+						$rrr->save();
+					}else{
+						$tmp 	= $skuarr;
+						$tmp['other']	= json_encode($item, JSON_UNESCAPED_UNICODE);
+						$tmp['sku_id']	= $item['itemSkuId'];
+						$tmp['price']	= $item['price'];
+						$tmp['weight']	= $item['itemWeight'];
+						$tmp['stocks']	= $item['quantity'];
+						$tmp['upc']		= $item['barcode'];
+						$tmp['customid']= $item['skuOuterId'];
+						$tmp['name']	= $item['salePropertyList'][0]['valueText'];
+						$waitAdd[] 	= $tmp;
+					}
+				}
+			}else{
+				$upc 		= $row['barCode'];
+				if(isset($originSkus[$upc])){
+					$rrr 	= $originSkus[$upc];
+					$rrr->title 	= $title;
+					$rrr->stocks 	= $skuarr['stocks'];
+					$rrr->other 	= null;
+					$rrr->sku_id 	= $skuarr['sku_id'];
+					$rrr->isWeight 	= $row['isWeight'];
+					$rrr->weightType= $row['weightType'];
+					$rrr->status 	= $row['status'];
+					$rrr->customid 	= $skuarr['customid'];
+					$rrr->price 	= $skuarr['price'];
+					$rrr->name 		= null;
+					$rrr->weight 	= $skuarr['weight'];
+					$rrr->stockupdate 	= time();
+					$rrr->save();
+				}else{
+					$waitAdd[] 	= $skuarr;
+				}
+			}
+			if(!empty($waitAdd)){
+				Sku::insert($waitAdd);
+			}
+			return true;
+		}else{
+			Log::error('Eleme同步sku['.$sku->id.']错误. ' . $arr['data']['errMessage'] ?? null);
+			return false;
+		}
+	}
+
 	/**
 	 * 获取订单列表
 	 */

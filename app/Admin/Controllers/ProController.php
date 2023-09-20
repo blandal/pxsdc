@@ -13,6 +13,7 @@ use Encore\Admin\Admin;
 use App\Admin\Extensions\Tools\ProFilter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use App\Admin\Actions\Sync\Product;
 
 class ProController extends AdminController
 {
@@ -105,6 +106,13 @@ EOT;
         $grid->tools(function ($tools) {
             $tools->append(new ProFilter());
         });
+        $grid->actions(function ($actions) {
+            $actions->add(new Product);
+            $actions->disableDelete();
+            $actions->disableEdit();
+            $actions->disableView();
+        });
+        $grid->disableCreateButton();
         return $grid;
     }
 

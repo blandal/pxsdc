@@ -31,6 +31,7 @@ class SkuController extends AdminController
         $platforms  = Platform::pluck('name', 'id')->toArray();
         $stores     = Store::pluck('title', 'store_id')->toArray();
 
+        $status         = ['下架', '上架'];
         $grid->column('id', __('编号'));
         $grid->column('platform', __('平台'))->filter($platforms)->using($platforms);
         $grid->column('store_id', __('店铺'))->filter($stores)->using($stores);
@@ -43,16 +44,16 @@ class SkuController extends AdminController
         // $grid->column('pro_id', __('商品'));
         // $grid->column('spu_id', __('Spu id'));
         $grid->column('price', __('价格'));
-        $grid->column('stocks', __('库存'));
+        $grid->column('stocks', __('库存'))->sortable();
         // $grid->column('upc', __('Upc'));
         // $grid->column('weight', __('Weight'));
         $grid->column('name', __('规格'));
         // $grid->column('customid', __('Customid'));
         // $grid->column('other', __('Other'));
-        $grid->column('status', __('Status'));
+        $grid->column('status', __('状态'))->filter($status)->using($status)->label(['danger', 'success']);
         $grid->column('pro.cate1', __('分类'));
         $grid->column('pro.cate2', __('子分类'));
-
+        $grid->disableCreateButton();
         return $grid;
     }
 

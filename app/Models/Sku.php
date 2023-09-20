@@ -84,7 +84,7 @@ class Sku extends Model{
                 $item->stocks       = $setTo;
                 $item->save();
             }else{
-                Log::debug();
+                Log::debug('库存同步失败!');
             }
             $updatedStores[$item->store_id]     = $item->store_id;
             $updatedPaltforms[$item->platform]  = $item->platform;
@@ -172,6 +172,11 @@ class Sku extends Model{
         }
         OrderProduct::whereIn('order_id', $platform_order_ids)->update(['status' => 1]);
         return true;
+    }
+
+    public function syncMe(){//同步此sku信息
+        if($this->platform == 1) return false;
+        $this->instance()->getProductRow($this);
     }
 
     /**

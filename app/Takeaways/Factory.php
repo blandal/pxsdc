@@ -17,4 +17,5 @@ interface Factory{
 	public function getOrders(int $page = 1, int $pagesize = 10);
 	public function getPlatform();
 	public function getStore();
+	// public function getProductRow();
 }
