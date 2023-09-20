@@ -105,8 +105,8 @@ class SaveOrders extends Eleme{
 
 		$tableSkuIds 	= [];
 		if(isset($this->dbOrders[$orderid])){
-			if($status == $this->changeStatus && $this->dbOrders[$orderid]->orderStatus != $status){//如果退单,则要同步加库存
-				$this->dbOrders[$orderid]->orderStatus 		= -1;
+			if($status == $this->changeStatus && $this->dbOrders[$orderid]->status != $status){//如果退单,则要同步加库存
+				$this->dbOrders[$orderid]->status 			= -1;
 				$this->dbOrders[$orderid]->orderStatusDesc 	= $orderStatusDesc;
 				$this->dbOrders[$orderid]->origin_content	= json_encode($row, JSON_UNESCAPED_UNICODE);
 				$this->dbOrders[$orderid]->save();
