@@ -118,7 +118,7 @@ class SaveProducts{
 			}
 			foreach($themsku as $sku_id => $item){
 				if(isset($skus[$sku_id])){
-					$this->updateSku($skus[$sku_id], $item['stocks'], $item['status'], $proid);
+					$this->updateSku($skus[$sku_id], $item['stocks'], $item['status'], $proid, $item['upc']);
 				}else{
 					$waitAdd[] 	= $item;
 				}
@@ -177,7 +177,7 @@ class SaveProducts{
 	/**
 	 * 更新sku,目前仅支持更新库存和状态
 	 */
-	private function updateSku(Sku $dbrow, $quality, $status, $proid){
+	private function updateSku(Sku $dbrow, $quality, $status, $proid, $upc = null){
 		$cansave 	= false;
 		if($dbrow->stocks != $quality){
 			$dbrow->stocks 			= $quality;
@@ -190,6 +190,10 @@ class SaveProducts{
 		}
 		if($dbrow->pro_id != $proid){
 			$dbrow->pro_id 	= $proid;
+			$cansave 		= true;
+		}
+		if($upc && !$dbrow->upc){
+			$dbrow->upc 	= $upc;
 			$cansave 		= true;
 		}
 		
