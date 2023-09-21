@@ -122,22 +122,29 @@ class SaveOrders extends Meituan{
 		$itemcount 	= $row['itemCount'];
 		$createTime = $row['createTime'] / 1000;
 
-		if($status == $this->changeStatus){//25是取消订单,订单取消需要加库存
-			$res 	= OrderProduct::where('order_id', $orderid)->get();
-			if($res){
-				Log::info('美团订单编号[' . $orderid . ']: 用户取消,执行退回库存!');
-				foreach($res as $item){//逐个商品退回库存
-					$item->rebackStocks();
-				}
-			}
-		}
+		// if($status == $this->changeStatus){//25是取消订单,订单取消需要加库存
+		// 	$res 	= OrderProduct::where('order_id', $orderid)->get();
+		// 	if($res){
+		// 		Log::info('美团订单编号[' . $orderid . ']: 用户取消,执行退回库存!');
+		// 		foreach($res as $item){//逐个商品退回库存
+		// 			$item->rebackStocks();
+		// 		}
+		// 	}
+		// }
 
 		if(isset($this->dbOrders[$orderid])){
-			if($status == $this->changeStatus && $this->dbOrders[$orderid]->status != $status){//如果退单,则要同步加库存
-				$this->dbOrders[$orderid]->status 			= -1;
+			if($status == $this->changeStatus && $this->dbOrders[$orderid]->orderStatus != $status){//如果退单,则要同步加库存
+				$this->dbOrders[$orderid]->orderStatus 		= -1;
 				$this->dbOrders[$orderid]->orderStatusDesc 	= $orderStatusDesc;
 				$this->dbOrders[$orderid]->origin_content	= json_encode($row, JSON_UNESCAPED_UNICODE);
 				$this->dbOrders[$orderid]->save();
+				$res 	= OrderProduct::where('order_id', $orderid)->get();
+				if($res){
+					Log::info('美团订单编号[' . $orderid . ']: 用户取消,执行退回库存!');
+					foreach($res as $item){//逐个商品退回库存
+						$item->rebackStocks();
+					}
+				}
 			}
 		}else{//新订单
 			if($status != $this->changeStatus){//如果订单不是取消单,则需要同步扣除库存

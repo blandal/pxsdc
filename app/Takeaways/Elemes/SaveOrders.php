@@ -30,9 +30,13 @@ class SaveOrders extends Eleme{
 		$this->store 	= $store;
 		$this->data 	= $data;
 		$orderIds 		= $this->getOrderIds();
-		$this->dbOrders = Order::whereIn('orderid', $orderIds)
-							->where('platform_id', $store->platform->id)
-							->where('store_id', $store->store_id)->pluck('id', 'orderid')->toArray();
+		$tmps 			= Order::whereIn('orderid', $orderIds)->where('platform_id', $store->platform->id)->get();
+		foreach($tmps as $item){
+			$this->dbOrders[$item->orderid]	= $item;
+		}
+		// $this->dbOrders = Order::whereIn('orderid', $orderIds)
+		// 					->where('platform_id', $store->platform->id)
+		// 					->where('store_id', $store->store_id)->pluck('id', 'orderid');
 		foreach($data as $item){
 			$this->fmtrow($item);
 			if(!$this->status){
@@ -88,15 +92,15 @@ class SaveOrders extends Eleme{
 		$base 		= $row['orderDetailBizDTO'];
 		$orderid 	= $base['orderId'];
 		$status 	= $base['status'];
-		if($status == $this->changeStatus){//10是取消订单,订单取消需要加库存
-			$res 	= OrderProduct::where('order_id', $orderid)->get();
-			if($res){
-				Log::info('饿了么订单编号[' . $orderid . ']: 用户取消,执行退回库存!');
-				foreach($res as $item){//逐个商品退回库存
-					$item->rebackStocks();
-				}
-			}
-		}
+		// if($status == $this->changeStatus){//10是取消订单,订单取消需要加库存
+		// 	$res 	= OrderProduct::where('order_id', $orderid)->get();
+		// 	if($res){
+		// 		Log::info('饿了么订单编号[' . $orderid . ']: 用户取消,执行退回库存!');
+		// 		foreach($res as $item){//逐个商品退回库存
+		// 			$item->rebackStocks();
+		// 		}
+		// 	}
+		// }
 		$orderStatusDesc 	= $base['statusDesc'];
 		$store_id 	= $this->store->store_id;
 		$itemcount 	= $row['orderDetailGoodsDTO']['goodsTotalNum'];
@@ -110,6 +114,13 @@ class SaveOrders extends Eleme{
 				$this->dbOrders[$orderid]->orderStatusDesc 	= $orderStatusDesc;
 				$this->dbOrders[$orderid]->origin_content	= json_encode($row, JSON_UNESCAPED_UNICODE);
 				$this->dbOrders[$orderid]->save();
+				$res 	= OrderProduct::where('order_id', $orderid)->get();
+				if($res){
+					Log::info('饿了么订单编号[' . $orderid . ']: 用户取消,执行退回库存!');
+					foreach($res as $item){//逐个商品退回库存
+						$item->rebackStocks();
+					}
+				}
 			}
 		}else{//新订单
 			if($status != $this->changeStatus){//如果订单不是取消单,则需要同步扣除库存
