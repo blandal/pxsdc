@@ -24,15 +24,15 @@ class Order extends Model{
     public function setStatusAttribute($val){
         if($val == -1 && $this->status != $val){
             try {
-                foreach(OrderProduct::where('order_id', $this->orderid)->get() as $item){
-                    $item->status   = -1;
-                    $item->save();
-                }
+                OrderProduct::where('order_id', $this->orderid)->update(['status' => -1]);
+                // foreach(OrderProduct::where('order_id', $this->orderid)->get() as $item){
+                //     $item->status   = -1;
+                //     $item->save();
+                // }
             } catch (\Exception $e) {
                 throw new \Exception($e->getMessage(), 1);
             }
         }
-        dd('ooooo');
         $this->attributes['status']     = $val;
     }
 }
