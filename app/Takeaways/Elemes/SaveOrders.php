@@ -46,6 +46,7 @@ class SaveOrders extends Eleme{
 	}
 
 	public function render(){//返回的是product_skus表的id对应本次列表下单的总数量
+		$platform_order_ids		= [];
 		if($this->status === true){
 			DB::transaction(function () {
 				if(!empty($this->addOrder)){
