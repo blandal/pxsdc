@@ -77,7 +77,7 @@ class SaveOrders extends Eleme{
 				}
 			}, 3);
 			$platform_order_ids 	= array_keys($this->addOrder);
-			Log::info('订单id: ' . ($platform_order_ids ? implode(',', $platform_order_ids) : '本次没有新订单插入!'));
+			Log::info('[饿了么]订单id: ' . ($platform_order_ids ? implode(',', $platform_order_ids) : '本次没有新订单插入!'));
 		}
 		return $platform_order_ids;
 	}
