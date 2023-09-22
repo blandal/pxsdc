@@ -28,6 +28,7 @@ Route::post('/orders', 'App\Http\Controllers\api\OrderController@orders');
 Route::get('/stocks2z', 'App\Http\Controllers\api\IndexController@stocks2z')->name('api.stocks2z');//将平台未关联上的产品库存设置未0
 Route::get('/autolink', 'App\Http\Controllers\api\ProductController@autolink')->name('api.autolink');//自动关联平台间的产品
 Route::get('/upccheck', 'App\Http\Controllers\api\ProductController@upccheck')->name('api.upccheck');//upc错误检查
+Route::get('/syncMt2Elm', 'App\Http\Controllers\api\ProductController@syncMt2Elm')->name('api.upccheck');//upc错误检查
 
 Route::get('/elesigns', function(){
     $arr        = [

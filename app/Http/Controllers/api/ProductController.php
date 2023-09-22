@@ -127,7 +127,7 @@ class ProductController extends Controller{
     }
 
     public function autolink(){//临时解决方案.将不同平台的相同 sku 进行绑定关联
-        return $this->error('功能暂未开放!');
+        // return $this->error('功能暂未开放!');
         set_time_limit(0);
         $allcount   = 0;
         foreach(Pro::get() as $item){
@@ -242,5 +242,23 @@ class ProductController extends Controller{
             }
         }
         return $this->success();
+    }
+
+    /**
+     * 同步美团的库存到饿了么
+     */
+    public function syncMt2Elm(Request $request){
+        $list   = [];
+        foreach(Sku::get() as $item){
+            $list[$item->id]    = $item;
+        }
+        foreach($list as $id => $item){
+            if($item->platform == 1 && $item->bind && isset($list[$item->bind]) && $list[$item->bind]->platform==2){//如果找到相互绑定的sku,则继续
+                $eleme  = $list[$item->bind];
+                if($item->stocks != $eleme->stocks){//如果库存不一致则更新
+                    $eleme->changeStock($item->stocks, '美团同步到饿了么', 0, 0, 0, true);
+                }
+            }
+        }
     }
 }
