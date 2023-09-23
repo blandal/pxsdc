@@ -146,7 +146,7 @@ class ProductController extends Controller{
         // return $this->error('功能暂未开放!');
         set_time_limit(0);
         $allcount   = 0;
-        foreach(Pro::get() as $item){
+        foreach(Pro::where('status', 1)->get() as $item){
             $skus   = $item->skus->where('byhum', 0);
             $count  = count($skus);
             if($count == 2){//如果下面是单个sku,则直接绑定
@@ -165,68 +165,67 @@ class ProductController extends Controller{
                     $item->save();
                 }
             }else{
-                $allbind        = true;
+                Sku::where('pro_id', $item['id'])->where('byhum', 0)->update(['bind' => null]);
+                $platformStores     = [];
                 foreach($skus as $val){
-                    $binded     = false;
-                    foreach($skus as $res){//当upc优化完成后, name 的判断要取消
-                        if(($val->name == $res->name || $val->upc == $res->upc) && $val->store_id != $res->store_id){// || $val->upc == $res->upc
-                            $val->bind  = $this->bds( $val->bind, $res->id);
-                            $val->save();
-                            $binded     = true;
-                            $allcount++;
+                    $platformStores[$val->platform . $val->store_id] = 1;
+                }
+
+                $plss       = count($platformStores) - 1;//平台店铺数量,每个sku正常情况下需要绑定此数量的其他sku
+                $binding    = [];
+                $itemErr    = false;
+                $itemReap   = false;
+                foreach($skus as $val){
+                    if(isset($binding[$val->upc][$val->platform . $val->store_id])){
+                        $itemReap    = true;//upc重复
+                        continue;
+                    }
+                    $binding[$val->upc][$val->platform . $val->store_id]    = 1;
+                    $binds  = [];
+                    foreach($skus as $vbl){
+                        if($val->upc == $vbl->upc && ($val->platform != $vbl->platform || $val->store_id != $vbl->store_id)){
+                            $binds[]    = $vbl->id;
                         }
                     }
-                    if($binded == false){
-                        $allbind    = false;
+                    if($plss != count($binds)){
+                        $itemErr    = true;
+                    }
+                    if(!empty($binds)){//即使sku未到应绑定数量,可以绑的先绑上
+                        Sku::where('id', $val->id)->update(['bind' => implode(',', $binds)]);
                     }
                 }
-                if($allbind == false){
-                    $item->err  = 1;
-                    $item->save();
+                $itemChange         = false;
+                if($itemErr  == true){
+                    if($item->err == 0){
+                        $item->upcerr   = 1;
+                        $itemChange     = true;
+                    }
                 }elseif($item->err == 1){
-                    $item->err  = 0;
+                    $item->upcerr   = 0;
+                    $itemChange     = true;
+                }
+                if($itemReap == true){
+                    if($item->upcrep == 0){
+                        $item->upcrep   = 1;
+                        $itemChange     = true;
+                    }
+                }elseif($item->upcrep == 1){
+                    $item->upcrep   = 0;
+                    $itemChange     = true;
+                }
+                if($itemReap == true){
+                    Sku::where('pro_id', $item['id'])->where('byhum', 0)->update(['bind' => null]);//upc存在重复的情况较严重,坚决不能有任何绑定!
+                }
+                if($itemChange === true){
                     $item->save();
                 }
             }
-            // dd($item->skus);
         }
         return $this->success('绑定完成!' . $allcount);
-        dd('----');
-
-
-
-        $res    = ProductSku::select('upc', 'id', 'product_id', 'platform_id')->whereRaw('upc is not null')->get()->toArray();
-        $upcs   = [];
-        // $skuids     = array_column($res, 'id');
-
-        // $binded    = ProductSkuBind::whereIn('sku_table_id', $skuids)->pluck('product_id', 'sku_table_id')->toArray();
-        foreach($res as $item){
-            $upcs[$item['upc']][]     = $item;
-        }
-        $binds      = [];
-        foreach($upcs as $upc => $item){
-            if(count($item) > 1){
-                $product_ids    = array_column($item, 'product_id');
-                $tmp            = array_flip($product_ids);
-                if(count($tmp) > 1){
-                    $min        = min($product_ids);
-                    ProductSku::where('upc', (string)$upc)->update(['product_id' => $min]);
-                }
-
-                $skuids         = array_flip(array_column($item, 'id'));
-                foreach($item as $zv){
-                    $tmp        = $skuids;
-                    unset($tmp[$zv['id']]);
-                    $r          = ProductSku::find($zv['id']);
-                    $r->bind    = implode(',', array_keys($tmp));
-                    $r->save();
-                }
-            }
-        }
-        dd($upcs);
     }
     private function bds($o, $a){
         $o      = $o ? explode(',', $o) : [];
+        // $o      = [];
         $o[]    = $a;
         $o      = array_flip(array_flip($o));
         return implode(',', $o);

@@ -68,8 +68,8 @@ EOT;
                 $upds   = false;
             break;
             case 'r'://upc重复
-                $res    = Sku::where('bind', 'like', '%,%')->pluck('pro_id', 'pro_id')->toArray();
-                $grid->model()->whereIn('id', $res);
+                // $res    = Sku::where('bind', 'like', '%,%')->pluck('pro_id', 'pro_id')->toArray();
+                $grid->model()->where('upcrep', 1);
                 $upds   = false;
             break;
         }
@@ -83,14 +83,14 @@ EOT;
         $grid->column('Sku', __('规格'))->display(function() use($pltsArr, $upds){
             $html       = '';
             foreach(Pro::links($this->skus->toArray()) as $items){
-                $html   .= '<table class="table"><tr><th>upc</th><th>规格</th><th>库存</th>';
+                $html   .= '<table class="table"><tr><th>ID</th><th>upc</th><th>规格</th><th>库存</th>';
                 if($upds == true){
                     $html   .= '<th>目标库存</th>';
                 }
                 $html   .= '</tr><tr>';
                 $idx    = 0;
                 foreach($items as $val){
-                    $html   .= '<tr><td><img src="'.asset($pltsArr[$val['platform']]) . '" style="width:14px">';
+                    $html   .= '<tr><td>'.$val['id'].'</td><td><img src="'.asset($pltsArr[$val['platform']]) . '" style="width:14px">';
                     $html   .= $val['upc'].'</td><td>'.$val['name'].'</td><td>'.$val['stocks'].'</td>';
                     $html   .= ($upds == true && $idx++ == 0 ? '<td rowspan="2" style="vertical-align: middle" data-skuid="'.$val['id'].'"><input="number"> <i class="fa fa-refresh rrrf"></i></td>' : '');
                     $html   .= '</tr>';
