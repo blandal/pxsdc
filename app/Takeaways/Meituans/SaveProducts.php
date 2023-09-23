@@ -24,6 +24,7 @@ class SaveProducts{
 	private $upcTable 	= [];
 	private $skusTable	= [];
 	public $nums 		= 0;
+	public $allowerSkus = [];
 	public function __construct(array $data, Store $store){
 		// dd($data);
 		if(!isset($data[0])){
@@ -89,9 +90,7 @@ class SaveProducts{
 			$themsku 	= [];
 			foreach($row['storeSkuList'] as $item){
 				$sku_id 	= $item['skuId'];
-				// if($sku_id == '1680783353731117068'){
-				// 	dd($row, $skus);
-				// }
+				$this->allowerSkus[] 	= $sku_id;
 				$themsku[$sku_id] 	= [
 					'platform'	=> $store->platform->id,
 					'store_id'	=> $item['storeId'],
@@ -116,6 +115,7 @@ class SaveProducts{
 					$themsku[$sku_id]['customid']	= $item['customSkuId'];
 				}
 			}
+
 			foreach($themsku as $sku_id => $item){
 				if(isset($skus[$sku_id])){
 					$this->updateSku($skus[$sku_id], $item['stocks'], $item['status'], $proid, $item['upc']);
@@ -125,7 +125,7 @@ class SaveProducts{
 			}
 		}
 		Sku::insert($waitAdd);
-		return $this->nums;
+		return $this->allowerSkus;
 
 
 
@@ -192,11 +192,11 @@ class SaveProducts{
 			$dbrow->pro_id 	= $proid;
 			$cansave 		= true;
 		}
-		if($upc && !$dbrow->upc){
+		if($upc && $dbrow->upc != $upc){
 			$dbrow->upc 	= $upc;
 			$cansave 		= true;
 		}
-		
+
 		if($cansave){
 			$dbrow->save();
 		}
@@ -207,7 +207,7 @@ class SaveProducts{
 			Log::error('美团商品同步失败: ' . implode('---', $this->errmsg));
 			return false;
 		}
-		return $this->nums;
+		return $this->allowerSkus;
 	}
 
 	/**

@@ -57,17 +57,33 @@ class ProductController extends Controller{
         $storeid        = (int)$request->post('store_id', 0);
         $page           = (int)$request->post('page', 1);
         $pagesize       = (int)$request->post('limit', 20);
-        $maxpage        = (int)$request->post('maxpage', 20);
+        $maxpage        = (int)$request->post('maxpage', 0);
 
         $instance       = Store::getInstance($storeid, $platform);//new $row->platform->object($row, $row->cookie);
         set_time_limit(0);
+        $allsku         = [];
         while(true){
             try {
-                $nums   = $instance->getProducts($page, $pagesize);
-                if(!is_numeric($nums)){
-                    return $this->error($nums);
+                $skuids     = $instance->getProducts($page, $pagesize);
+                if($platform == 1){
+                    if(!is_array($skuids)){
+                        return $this->error($skuids);
+                    }
+                    $nums   = count($skuids);
+                    $allsku = array_merge($allsku, $skuids);
+                }else{
+                    if(!is_numeric($skuids)){
+                        return $this->error($skuids);
+                    }
+                    $nums   = $skuids;
                 }
+
                 if(!$nums || $nums < $pagesize){
+                    //删除牵牛花上删除的商品
+                    if($platform == 1 && !empty($allsku)){
+                        Pro::whereRaw('1=1')->update(['status' => 0]);
+                        Pro::leftJoin('skus', 'skus.pro_id', '=', 'pros.id')->whereIn('skus.sku_id', $allsku)->where('skus.platform', 1)->update(['pros.status' => 1]);
+                    }
                     return $this->success('商品自动同步结束!');
                 }
             } catch (\Exception $e) {
@@ -152,7 +168,7 @@ class ProductController extends Controller{
                 $allbind        = true;
                 foreach($skus as $val){
                     $binded     = false;
-                    foreach($skus as $res){
+                    foreach($skus as $res){//当upc优化完成后, name 的判断要取消
                         if(($val->name == $res->name || $val->upc == $res->upc) && $val->store_id != $res->store_id){// || $val->upc == $res->upc
                             $val->bind  = $this->bds( $val->bind, $res->id);
                             $val->save();

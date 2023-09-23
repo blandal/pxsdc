@@ -59,6 +59,7 @@ $('.rrrf').click(function(){
 EOT;
         Admin::script($script);
         $grid = new Grid(new Pro());
+        $grid->model()->where('status', 1);
         $errs   = request()->get('errs');
         $upds   = true;
         switch($errs){
