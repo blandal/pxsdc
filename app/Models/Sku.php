@@ -276,11 +276,11 @@ class Sku extends Model{
                 }
                 $itemChange         = false;
                 if($itemErr  == true){
-                    if($item->err == 0){
+                    if($item->upcerr == 0){
                         $item->upcerr   = 1;
                         $itemChange     = true;
                     }
-                }elseif($item->err == 1){
+                }elseif($item->upcerr == 1){
                     $item->upcerr   = 0;
                     $itemChange     = true;
                 }
