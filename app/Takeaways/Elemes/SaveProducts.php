@@ -54,6 +54,9 @@ class SaveProducts{
 
 		$waitAdd 		= [];
 		foreach($data as $row){
+			if(!isset($row['barCode'])){
+				continue;
+			}
 			$this->nums++;
 			$title 		= $row['title'];
 			$cate1 		= $row['customCategoryParentName'];
@@ -95,6 +98,9 @@ class SaveProducts{
 			];
 			if($row['hasSku'] == true){
 				foreach($row['itemSkuList'] as $item){
+					if(!isset($item['barCode'])){
+						continue;
+					}
 					if(isset($skus[$spu_id][$item['itemSkuId']])){
 						$this->updateSku($skus[$spu_id][$item['itemSkuId']], $item['quantity'], $row['status'], $proid, json_encode($item, JSON_UNESCAPED_UNICODE), $item['barCode']);
 					}else{
