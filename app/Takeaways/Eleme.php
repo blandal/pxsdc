@@ -78,12 +78,15 @@ class Eleme implements Factory{
 	 * 请使用链式调用设置请求参数,调用方法为牵牛花此接口的参数名称,复制参数名称调用即可
 	 * @return string or bool
 	 */
-	public function getProducts(int $page = 1, int $pagesize = 20){
+	public function getProducts(int $page = 1, int $pagesize = 20, $title = null){
 		$this->method 	= (new \App\Takeaways\Elemes\GetProducts())
 				->pageNum($page)
 				->pageSize($pagesize)
 				->sellerId($this->store->sellerId)
 				->storeIds_0($this->store->store_id);
+		if($title){
+			$this->method->title($title);
+		}
 		$content 		= $this();
 		$data           = json_decode($content, true);
         if(!$data){

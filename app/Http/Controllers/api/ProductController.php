@@ -58,13 +58,14 @@ class ProductController extends Controller{
         $page           = (int)$request->post('page', 1);
         $pagesize       = (int)$request->post('limit', 20);
         $maxpage        = (int)$request->post('maxpage', 0);
+        $title          = trim($request->post('title', ''));
 
         $instance       = Store::getInstance($storeid, $platform);//new $row->platform->object($row, $row->cookie);
         set_time_limit(0);
         $allsku         = [];
         while(true){
             try {
-                $skuids     = $instance->getProducts($page, $pagesize);
+                $skuids     = $instance->getProducts($page, $pagesize, $title);
                 if($platform == 1){
                     if(!is_array($skuids)){
                         return $this->error($skuids);

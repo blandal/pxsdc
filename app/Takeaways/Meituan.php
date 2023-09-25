@@ -38,10 +38,13 @@ class Meituan implements Factory{
 	 * 请使用链式调用设置请求参数,调用方法为牵牛花此接口的参数名称,复制参数名称调用即可
 	 * @return App\Takeaways\Meituans\GetProducts
 	 */
-	public function getProducts(int $page = 1, int $pagesize = 10){
+	public function getProducts(int $page = 1, int $pagesize = 10, $title = null){
 		$this->method 	= (new \App\Takeaways\Meituans\GetProducts())
 				->page($page)
 				->pageSize($pagesize);
+		if($title){
+			$this->method->name($title);
+		}
 		$content 		= $this();
 		$data           = json_decode($content, true);
         if(!$data){

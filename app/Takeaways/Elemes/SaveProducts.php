@@ -98,11 +98,12 @@ class SaveProducts{
 			];
 			if($row['hasSku'] == true){
 				foreach($row['itemSkuList'] as $item){
-					if(!isset($item['barCode'])){
+					if(!isset($item['barCode']) && !isset($item['barcode'])){
 						continue;
 					}
+					$upc 	= $item['barCode'] ?? $item['barcode'];
 					if(isset($skus[$spu_id][$item['itemSkuId']])){
-						$this->updateSku($skus[$spu_id][$item['itemSkuId']], $item['quantity'], $row['status'], $proid, json_encode($item, JSON_UNESCAPED_UNICODE), $item['barCode']);
+						$this->updateSku($skus[$spu_id][$item['itemSkuId']], $item['quantity'], $row['status'], $proid, json_encode($item, JSON_UNESCAPED_UNICODE), $upc);
 					}else{
 						$tmp 	= $skuarr;
 						$tmp['other']	= json_encode($item, JSON_UNESCAPED_UNICODE);
@@ -110,7 +111,7 @@ class SaveProducts{
 						$tmp['price']	= $item['price'];
 						$tmp['weight']	= $item['itemWeight'];
 						$tmp['stocks']	= $item['quantity'];
-						$tmp['upc']		= $item['barcode'];
+						$tmp['upc']		= $upc;
 						$tmp['customid']= $item['skuOuterId'];
 						$tmp['name']	= $item['salePropertyList'][0]['valueText'];
 						$waitAdd[] 	= $tmp;
