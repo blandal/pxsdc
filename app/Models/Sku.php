@@ -219,4 +219,88 @@ class Sku extends Model{
     //         $this->attributes['stocks']     = $val;
     //     }
     // }
+    public static function autolink($pro_id = 0){
+        set_time_limit(0);
+        $allcount   = 0;
+        $objs       = Pro::where('status', 1);
+        if($pro_id >0){
+            $objs   = $objs->where('id', $pro_id);
+        }
+        foreach($objs->get() as $item){
+            $skus   = $item->skus->where('byhum', 0);
+            $count  = count($skus);
+            if($count == 2){//如果下面是单个sku,则直接绑定
+                if($skus[0]->store_id == $skus[1]->store_id){
+                    $item->err  = 1;
+                    $item->save();
+                    continue;
+                }
+                $skus[0]->bind    = $this->bds($skus[0]->bind, $skus[1]->id);
+                $skus[0]->save();
+                $skus[1]->bind    = $this->bds($skus[1]->bind, $skus[0]->id);
+                $skus[1]->save();
+                $allcount       += 2;
+                if($item->err == 1){
+                    $item->err  = 0;
+                    $item->save();
+                }
+            }else{
+                Sku::where('pro_id', $item['id'])->where('byhum', 0)->update(['bind' => null]);
+                $platformStores     = [];
+                foreach($skus as $val){
+                    $platformStores[$val->platform . $val->store_id] = 1;
+                }
+
+                $plss       = count($platformStores) - 1;//平台店铺数量,每个sku正常情况下需要绑定此数量的其他sku
+                $binding    = [];
+                $itemErr    = false;
+                $itemReap   = false;
+                foreach($skus as $val){
+                    if(isset($binding[$val->upc][$val->platform . $val->store_id])){
+                        $itemReap    = true;//upc重复
+                        continue;
+                    }
+                    $binding[$val->upc][$val->platform . $val->store_id]    = 1;
+                    $binds  = [];
+                    foreach($skus as $vbl){
+                        if($val->upc == $vbl->upc && ($val->platform != $vbl->platform || $val->store_id != $vbl->store_id)){
+                            $binds[]    = $vbl->id;
+                        }
+                    }
+                    if($plss != count($binds)){
+                        $itemErr    = true;
+                    }
+                    if(!empty($binds)){//即使sku未到应绑定数量,可以绑的先绑上
+                        Sku::where('id', $val->id)->update(['bind' => implode(',', $binds)]);
+                    }
+                }
+                $itemChange         = false;
+                if($itemErr  == true){
+                    if($item->err == 0){
+                        $item->upcerr   = 1;
+                        $itemChange     = true;
+                    }
+                }elseif($item->err == 1){
+                    $item->upcerr   = 0;
+                    $itemChange     = true;
+                }
+                if($itemReap == true){
+                    if($item->upcrep == 0){
+                        $item->upcrep   = 1;
+                        $itemChange     = true;
+                    }
+                }elseif($item->upcrep == 1){
+                    $item->upcrep   = 0;
+                    $itemChange     = true;
+                }
+                if($itemReap == true){
+                    Sku::where('pro_id', $item['id'])->where('byhum', 0)->update(['bind' => null]);//upc存在重复的情况较严重,坚决不能有任何绑定!
+                }
+                if($itemChange === true){
+                    $item->save();
+                }
+            }
+        }
+        return true;
+    }
 }

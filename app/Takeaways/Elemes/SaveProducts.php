@@ -95,6 +95,7 @@ class SaveProducts{
 				'status'	=> $row['status'],
 				'isWeight'	=> $row['isWeight'],
 				'weightType'=> $row['weightType'],
+				'platform_product_id'	=> $row['itemId'],
 			];
 			if($row['hasSku'] == true){
 				foreach($row['itemSkuList'] as $item){
@@ -103,7 +104,7 @@ class SaveProducts{
 					}
 					$upc 	= $item['barCode'] ?? $item['barcode'];
 					if(isset($skus[$spu_id][$item['itemSkuId']])){
-						$this->updateSku($skus[$spu_id][$item['itemSkuId']], $item['quantity'], $row['status'], $proid, json_encode($item, JSON_UNESCAPED_UNICODE), $upc);
+						$this->updateSku($skus[$spu_id][$item['itemSkuId']], $item['quantity'], $row['status'], $proid, json_encode($item, JSON_UNESCAPED_UNICODE), $upc, $row['itemId']);
 					}else{
 						$tmp 	= $skuarr;
 						$tmp['other']	= json_encode($item, JSON_UNESCAPED_UNICODE);
@@ -119,7 +120,7 @@ class SaveProducts{
 				}
 			}else{
 				if(isset($skus[$spu_id][$spu_id])){
-					$this->updateSku($skus[$spu_id][$spu_id], $skuarr['stocks'], $skuarr['status'], $proid, null, $row['barCode']);
+					$this->updateSku($skus[$spu_id][$spu_id], $skuarr['stocks'], $skuarr['status'], $proid, null, $row['barCode'], $row['itemId']);
 				}else{
 					$waitAdd[] 	= $skuarr;
 				}
@@ -155,7 +156,7 @@ class SaveProducts{
 	/**
 	 * 更新sku,目前仅支持更新库存和状态
 	 */
-	private function updateSku(Sku $dbrow, $quality, $status, $proid, $other = null, $upc = null){
+	private function updateSku(Sku $dbrow, $quality, $status, $proid, $other = null, $upc = null, $itemId = null){
 		$cansave 	= false;
 		if($dbrow->stocks != $quality){
 			$dbrow->stocks 			= $quality;
@@ -178,6 +179,10 @@ class SaveProducts{
 		}
 		if($upc && $dbrow->upc != $upc){
 			$dbrow->upc 	= $upc;
+			$cansave 		= true;
+		}
+		if($itemId && $dbrow->platform_product_id != $itemId){
+			$dbrow->platform_product_id 	= $itemId;
 			$cansave 		= true;
 		}
 		if($cansave){

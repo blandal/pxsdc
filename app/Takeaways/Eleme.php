@@ -106,7 +106,7 @@ class Eleme implements Factory{
 		$this->method 	= (new \App\Takeaways\Elemes\GetProductRow())
 				->sellerId($this->store->sellerId)
 				->storeIds_0($this->store->store_id)
-				->mixedBarCodeOrId($sku->upc);
+				->mixedBarCodeOrId($sku->spu_id);
 		$resp 			= $this();
 		$arr 			= json_decode($resp, true);
 		if(isset($arr['data']['data'][0])){
@@ -122,9 +122,9 @@ class Eleme implements Factory{
 			if($row['hasSku'] != $isMany){//如果产品的sku发生改变,则删除原有的sku并新增
 				Sku::where('pro_id', $sku->pro_id)->where('platform', $sku->platform)->where('store_id', $sku->store_id)->delete();
 			}else{
-				$tmp 	= Sku::where('pro_id', $sku->pro_id)->where('platform', $sku->platform)->where('store_id', $sku->store_id)->get();
+				$tmp 	= Sku::where('spu_id', $sku->spu_id)->where('platform', $sku->platform)->where('store_id', $sku->store_id)->get();
 				foreach($tmp as $item){
-					$originSkus[$item->upc] 	= $item;
+					$originSkus[$item->sku_id] 	= $item;
 				}
 			}
 			$skuarr 	= [
@@ -150,13 +150,15 @@ class Eleme implements Factory{
 			];
 			if($row['hasSku'] == true){
 				foreach($row['itemSkuList'] as $item){
+					$skuid 	= $item['itemSkuId'];
 					$upc 	= $item['barcode'];
-					if(isset($originSkus[$upc])){
-						$rrr 	= $originSkus[$upc];
+					if(isset($originSkus[$skuid])){
+						$rrr 	= $originSkus[$skuid];
 						$rrr->title 	= $title;
 						$rrr->stocks 	= $item['quantity'];
 						$rrr->other 	= json_encode($item, JSON_UNESCAPED_UNICODE);
-						$rrr->sku_id 	= $item['itemSkuId'];
+						// $rrr->sku_id 	= $item['itemSkuId'];
+						$rrr->upc 		= $upc;
 						$rrr->isWeight 	= $row['isWeight'] ?? null;
 						$rrr->weightType= $row['weightType'];
 						$rrr->status 	= $row['status'];
@@ -169,11 +171,11 @@ class Eleme implements Factory{
 					}else{
 						$tmp 	= $skuarr;
 						$tmp['other']	= json_encode($item, JSON_UNESCAPED_UNICODE);
-						$tmp['sku_id']	= $item['itemSkuId'];
+						$tmp['sku_id']	= $skuid;
 						$tmp['price']	= $item['price'];
 						$tmp['weight']	= $item['itemWeight'];
 						$tmp['stocks']	= $item['quantity'];
-						$tmp['upc']		= $item['barcode'];
+						$tmp['upc']		= $upc;
 						$tmp['customid']= $item['skuOuterId'];
 						$tmp['name']	= $item['salePropertyList'][0]['valueText'];
 						if($sku->upc == $upc){
@@ -185,12 +187,12 @@ class Eleme implements Factory{
 				}
 			}else{
 				$upc 		= $row['barCode'];
-				if(isset($originSkus[$upc])){
-					$rrr 	= $originSkus[$upc];
+				if(isset($originSkus[$spu_id])){
+					$rrr 	= $originSkus[$spu_id];
 					$rrr->title 	= $title;
 					$rrr->stocks 	= $skuarr['stocks'];
 					$rrr->other 	= null;
-					$rrr->sku_id 	= $skuarr['sku_id'];
+					$rrr->sku_id 	= $spu_id;
 					$rrr->isWeight 	= $row['isWeight'];
 					$rrr->weightType= $row['weightType'];
 					$rrr->status 	= $row['status'];
@@ -212,6 +214,7 @@ class Eleme implements Factory{
 			if(!empty($waitAdd)){
 				Sku::insert($waitAdd);
 			}
+			Sku::autolink($sku->pro_id);
 			return true;
 		}else{
 			Log::error('Eleme同步sku['.$sku->id.']错误. ' . $arr['data']['errMessage'] ?? null);
