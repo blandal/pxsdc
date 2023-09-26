@@ -225,13 +225,6 @@ class ProductController extends Controller{
         // }
         return $this->success('绑定完成!' . $allcount);
     }
-    private function bds($o, $a){
-        $o      = $o ? explode(',', $o) : [];
-        // $o      = [];
-        $o[]    = $a;
-        $o      = array_flip(array_flip($o));
-        return implode(',', $o);
-    }
 
     public function upccheck(){//检查upc是否错误
         set_time_limit(0);

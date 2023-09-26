@@ -235,9 +235,9 @@ class Sku extends Model{
                     $item->save();
                     continue;
                 }
-                $skus[0]->bind    = $this->bds($skus[0]->bind, $skus[1]->id);
+                $skus[0]->bind    = self::bds($skus[0]->bind, $skus[1]->id);
                 $skus[0]->save();
-                $skus[1]->bind    = $this->bds($skus[1]->bind, $skus[0]->id);
+                $skus[1]->bind    = self::bds($skus[1]->bind, $skus[0]->id);
                 $skus[1]->save();
                 $allcount       += 2;
                 if($item->err == 1){
@@ -302,5 +302,12 @@ class Sku extends Model{
             }
         }
         return true;
+    }
+    private static function bds($o, $a){
+        $o      = $o ? explode(',', $o) : [];
+        // $o      = [];
+        $o[]    = $a;
+        $o      = array_flip(array_flip($o));
+        return implode(',', $o);
     }
 }
