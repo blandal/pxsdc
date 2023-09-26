@@ -242,8 +242,14 @@ class Sku extends Model{
                 $allcount       += 2;
                 if($item->err == 1){
                     $item->err  = 0;
-                    $item->save();
                 }
+                if($item->upcerr == 1){
+                    $item->upcerr   = 0;
+                }
+                if($item->upcrep == 1){
+                        $item->upcrep   = 0;
+                    }
+                $item->save();
             }else{
                 Sku::where('pro_id', $item['id'])->where('byhum', 0)->update(['bind' => null]);
                 $platformStores     = [];
