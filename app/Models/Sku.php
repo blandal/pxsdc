@@ -72,13 +72,18 @@ class Sku extends Model{
             if(isset($updatedStores[$item->store_id]) || isset($updatedPaltforms[$item->platform])){
                 continue;
             }
-            //当sku的 stockupdate 时间
+            $obj    = $item->instance();
+
+            if($item->platform == 1 && $isval == false){//饿了么出单后修改牵牛花的库存,则先查询牵牛花库存并更新为最新库存.防止牵牛花进货后库存减少
+                $obj->getProductRow($item);
+                $item   = Sku::find($item->id);
+            }
+
             $origin         = $item->stocks;
             $setTo          = $isval === true ? $val : $origin - $val;
             if($setTo < 0){
                 $setTo      = 0;
             }
-            $obj    = $item->instance();
             if(true === $obj->changeStock($setTo, $item)){
                 $insertSkuIds[]     = $item->id;
                 $content[]          = $item->id . ':' . $origin . '->' . $setTo;
