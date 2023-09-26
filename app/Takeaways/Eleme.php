@@ -119,14 +119,16 @@ class Eleme implements Factory{
 			$isMany 	= $sku->other ? true : false;//是否多sku判断
 			$originSkus	= [];
 			$waitAdd 	= [];
-			if($row['hasSku'] != $isMany){//如果产品的sku发生改变,则删除原有的sku并新增
-				Sku::where('pro_id', $sku->pro_id)->where('platform', $sku->platform)->where('store_id', $sku->store_id)->delete();
-			}else{
-				$tmp 	= Sku::where('spu_id', $sku->spu_id)->where('platform', $sku->platform)->where('store_id', $sku->store_id)->get();
-				foreach($tmp as $item){
-					$originSkus[$item->sku_id] 	= $item;
-				}
-			}
+
+			Sku::where('pro_id', $sku->pro_id)->where('platform', $sku->platform)->where('store_id', $sku->store_id)->delete();
+			// if($row['hasSku'] != $isMany){//如果产品的sku发生改变,则删除原有的sku并新增
+			// 	Sku::where('pro_id', $sku->pro_id)->where('platform', $sku->platform)->where('store_id', $sku->store_id)->delete();
+			// }else{
+			// 	$tmp 	= Sku::where('spu_id', $sku->spu_id)->where('platform', $sku->platform)->where('store_id', $sku->store_id)->get();
+			// 	foreach($tmp as $item){
+			// 		$originSkus[$item->sku_id] 	= $item;
+			// 	}
+			// }
 			$skuarr 	= [
 				'platform'	=> $sku->platform,
 				'store_id'	=> $sku->store_id,
