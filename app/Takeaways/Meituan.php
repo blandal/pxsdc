@@ -10,6 +10,7 @@ use App\Models\Product;
 use App\Models\Sku;
 use App\Models\Store;
 use Illuminate\Support\Facades\Log;
+use App\Models\LogStock;
 class Meituan implements Factory{
 	private $domain 	= 'https://qnh.meituan.com/api/v1/';
 	private $store 		= null;
@@ -103,6 +104,16 @@ class Meituan implements Factory{
 				$skuid 		= $item['skuId'];
 				if(isset($originSkus[$skuid])){
 					$skuRow 	= $originSkus[$skuid];
+					if($skuRow->stocks != $skku[$skuid]['stocks']){
+						LogStock::insert([
+			                'remark'    => '牵牛花库存不一致,更新本地库存.',
+			                'addtime'   => time(),
+			                'userid'    => 0,
+			                'skuids'    => $skuRow->id,
+			                'content'   => $skuRow->stocks . '->' . $skku[$skuid]['stocks'],
+			                'take_time' => 0,
+			            ]);
+					}
 					unset($originSkus[$skuid]);
 					$skuRow->upc 		= $item['upc'];
 					$skuRow->weight 	= $item['weight'];

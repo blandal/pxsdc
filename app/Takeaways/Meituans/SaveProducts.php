@@ -9,6 +9,7 @@ use App\Models\Pro;
 use App\Models\Sku;
 use App\Takeaways\BaseFactory;
 use Illuminate\Support\Facades\Log;
+use App\Models\LogStock;
 class SaveProducts{
 	use BaseFactory;
 	// private $status 	= true;
@@ -180,6 +181,15 @@ class SaveProducts{
 	private function updateSku(Sku $dbrow, $quality, $status, $proid, $upc = null){
 		$cansave 	= false;
 		if($dbrow->stocks != $quality){
+			//记录牵牛花库存变动
+			LogStock::insert([
+                'remark'    => '牵牛花库存不一致,更新本地库存.',
+                'addtime'   => time(),
+                'userid'    => 0,
+                'skuids'    => $dbrow->id,
+                'content'   => $dbrow->stocks . '->' . $quality,
+                'take_time' => 0,
+            ]);
 			$dbrow->stocks 			= $quality;
 			$dbrow->stockupdate 	= time();
 			$cansave 				= true;

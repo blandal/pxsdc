@@ -38,6 +38,7 @@ class SkuController extends AdminController
         // $grid->column('images', __('店铺'))->display(function(){
         //     return $this->pro->images;
         // })->image(60,60);
+        $grid->column('sku_id', 'SKU')->filter('like');
         $grid->column('pro.images', __('图片'))->image(60,60);
         $grid->column('title', __('标题'))->filter('like');
         // $grid->column('sku_id', __('Sku id'));
