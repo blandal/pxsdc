@@ -124,8 +124,8 @@ class SaveOrders extends Meituan{
 					return $this->seterr($orderId . ' 获取商品详情失败!');
 				}
 				try {
-					foreach($orderProducts['data']['itemInfo'] as $item){
-						$skuid 				= $item['sku'];
+					foreach($orderProducts['data']['itemInfo'] as $zzcf){
+						$skuid 				= $zzcf['sku'];
 						$skuTableId 		= 0;
 						if(isset($tableSkuIds[$skuid])){
 							$skuTableId 	= $tableSkuIds[$skuid];
@@ -138,14 +138,14 @@ class SaveOrders extends Meituan{
 						}
 						$productDbArr[] 		= [
 							'order_id'			=> $orderId,
-							'sku_id'			=> $item['sku'],
-							'orderItemId'		=> $item['orderItemId'],
-							'quantity'			=> $item['orderQuantity'],
-							'upc'				=> $item['upc'],
+							'sku_id'			=> $zzcf['sku'],
+							'orderItemId'		=> $zzcf['orderItemId'],
+							'quantity'			=> $zzcf['orderQuantity'],
+							'upc'				=> $zzcf['upc'],
 							'storeId'			=> $store->store_id,
-							'spec'				=> $item['spec'],
-							'title'				=> $item['skuName'],
-							'customSkuId'		=> $item['customSkuId'],
+							'spec'				=> $zzcf['spec'],
+							'title'				=> $zzcf['skuName'],
+							'customSkuId'		=> $zzcf['customSkuId'],
 							'platform_id'		=> $this->platform,
 							'sku_table_id'		=> $skuTableId,
 							'createtime'		=> $order->createTime,
@@ -183,30 +183,32 @@ class SaveOrders extends Meituan{
 				$order 		= $orders[$orderId];
 			}
 
-			$start 					= $item['orderOperatorLogList'][0]['operationTime'] ?? 0;
-			$end 					= $item['orderOperatorLogList'][count($item['orderOperatorLogList']) - 1]['operationTime'] ?? 0;
-			$order->used_time 		= (int)(($end-$start) / 1000);
 
-			foreach($item['orderOperatorLogList'] as $pcv){
-				switch($pcv['operatorType']){
-					case 3://接单开始时间
-						$order->jiedan_time 	= $pcv['operationTime'] / 1000;
-					break;
-					case 4://开始拣货时间
-						$order->pack_time 		= $pcv['operationTime'] / 1000;
-					break;
-					case 5://拣货完成时间
-						$order->pack_end_time 	= $pcv['operationTime'] / 1000;
-					break;
-					case 6://配送开始时间
-						$order->ship_time 		= $pcv['operationTime'] / 1000;
-					break;
-					case 7://配送送达时间
-						$order->ship_end_time 	= $pcv['operationTime'] / 1000;
-					break;
-					case 8://完成时间
-						$order->done_time 		= $pcv['operationTime'] / 1000;
-					break;
+			if(isset($item['orderOperatorLogList'])){
+				$start 					= $item['orderOperatorLogList'][0]['operationTime'] ?? 0;
+				$end 					= $item['orderOperatorLogList'][count($item['orderOperatorLogList']) - 1]['operationTime'] ?? 0;
+				$order->used_time 		= (int)(($end-$start) / 1000);
+				foreach($item['orderOperatorLogList'] as $pcv){
+					switch($pcv['operatorType']){
+						case 3://接单开始时间
+							$order->jiedan_time 	= $pcv['operationTime'] / 1000;
+						break;
+						case 4://开始拣货时间
+							$order->pack_time 		= $pcv['operationTime'] / 1000;
+						break;
+						case 5://拣货完成时间
+							$order->pack_end_time 	= $pcv['operationTime'] / 1000;
+						break;
+						case 6://配送开始时间
+							$order->ship_time 		= $pcv['operationTime'] / 1000;
+						break;
+						case 7://配送送达时间
+							$order->ship_end_time 	= $pcv['operationTime'] / 1000;
+						break;
+						case 8://完成时间
+							$order->done_time 		= $pcv['operationTime'] / 1000;
+						break;
+					}
 				}
 			}
 
@@ -215,8 +217,8 @@ class SaveOrders extends Meituan{
 				$res 	= OrderProduct::where('order_id', $orderId)->get();
 				if($res){
 					Log::info('美团订单编号[' . $orderId . ']: 用户取消,执行退回库存!');
-					foreach($res as $item){//逐个商品退回库存
-						$item->rebackStocks();
+					foreach($res as $vvzzs){//逐个商品退回库存
+						$vvzzs->rebackStocks();
 					}
 				}
 				$order->status 				= -1;
