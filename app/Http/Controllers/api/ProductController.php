@@ -223,7 +223,7 @@ class ProductController extends Controller{
         //         }
         //     }
         // }
-        return $this->success('绑定完成!' . $allcount);
+        return $this->success('绑定完成!');
     }
 
     public function upccheck(){//检查upc是否错误
