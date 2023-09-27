@@ -38,7 +38,7 @@ class OrderController extends Controller{
      * 通过其他方获得的订单数据,此接口仅保存订单数据和操作库存修改
      */
     public function orders(Request $request){
-        return $this->error('接口重新部署中....');
+        // return $this->error('接口重新部署中....');
         set_time_limit(0);
         $platform   = (int)$request->post('platform');
         $storeid    = (int)$request->post('store_id');
