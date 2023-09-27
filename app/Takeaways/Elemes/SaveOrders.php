@@ -11,41 +11,185 @@ use Illuminate\Support\Facades\DB;
 use App\Takeaways\Eleme;
 use App\Takeaways\BaseFactory;
 use Illuminate\Support\Facades\Log;
+/**
+ * orderDetailBizDTO.distance 预计送达(2km)
+ * orderDetailDeliveryDTO.deliveryFeeDesc 预估配送费(预估配送费5.72元)
+ * orderDetailDeliveryDTO.deliveryParty 配送模式id(2)
+ * orderDetailDeliveryDTO.deliveryPartyDesc 配送模式(众包-跑腿)
+ * orderDetailDeliveryDTO.shopPickedTakeTime 拣货时长(拣货用时 14分39秒)
+ */
+
+
 class SaveOrders extends Eleme{
 	use BaseFactory;
 	private $changeStatus 	= 10;
-	private $dbOrders 	= [];
-	private $addOrder 	= [];
-	private $addOp 		= [];
-	private $data  		= [];
-	private $store 		= null;
-	private $opIds 		= [];
+	private $newOrderid		= [];
 	public function __construct(array $data, Store $store){
 		if(!isset($data[0])){
 			if(!isset($data['data']['data']['mainOrderList'])){
 				return $this->seterr('传入数据格式错误,不是一个数组或者没有 data 的 key');
 			}
-			$data 	= $data['data']['data']['mainOrderList'];
+			$order_list 	= $data['data']['data']['order_list'];
+			$data 			= $data['data']['data']['mainOrderList'];
 		}
-		$this->store 	= $store;
-		$this->data 	= $data;
-		$orderIds 		= $this->getOrderIds();
-		$tmps 			= Order::whereIn('orderid', $orderIds)->where('platform_id', $store->platform->id)->get();
-		foreach($tmps as $item){
-			$this->dbOrders[$item->orderid]	= $item;
+		$platform_id 	= $store->platform->id;
+		$orders 		= [];
+		foreach(Order::whereIn('orderid', $this->getOrderIds($data))->where('platform_id', $platform_id)->where('store_id', $store->store_id)->get() as $item){
+			$orders[$item->orderid]	= $item;
 		}
-		// $this->dbOrders = Order::whereIn('orderid', $orderIds)
-		// 					->where('platform_id', $store->platform->id)
-		// 					->where('store_id', $store->store_id)->pluck('id', 'orderid');
-		foreach($data as $item){
-			$this->fmtrow($item);
-			if(!$this->status){
-				break;
+		$tableSkuIds 			= [];
+		foreach($data as $indexx => $item){
+			$orderId 			= $item['orderDetailBizDTO']['orderId'];
+			$status 			= $item['orderDetailBizDTO']['status'];
+			$otherCost 			= $item['ols'] = $order_list[$indexx];
+
+			if(!isset($orders[$orderId])){
+				$order 					= new Order;
+				$order->orderid 		= $orderId;
+				$order->store_id 		= $store->store_id;
+				$order->platform_id 	= $platform_id;
+
+				$order->product_amount 	= $otherCost['order_sub_total']['price'];
+				$order->deliveryAmount 	= $otherCost['orderSettle']['callRiderDeliveryAmt'];
+				$order->pay_amount 		= $this->price($item['orderDetailSettleDTO']['subCostItemList'][0]['subItemList'][0]['value'])[0];//支付金额
+				$order->merchantAmount 	= $this->price($item['orderDetailSettleDTO']['estimateIncomeItem']['value'])[0];//预计收入
+				$order->performService 	= $this->price($otherCost['extract_commission']['commission_total'])[0];//履约服务费
+				$order->createTime 		= strtotime($item['orderDetailBizDTO']['createTime']);//订单创建时间
+				$order->pay_time 		= strtotime($item['orderDetailBizDTO']['confirmTime']);//订单支付时间
+				$order->userid 			= $item['orderDetailUserDTO']['userId'];
+				$order->username 		= $item['orderDetailUserDTO']['userRealName'];
+				$order->phone 			= $item['orderDetailUserDTO']['userPhone'];
+				$order->address 		= $item['orderDetailUserDTO']['userAddress'];
+				$order->user_tags 		= implode(',', $item['orderDetailUserDTO']['userTagsDescList']);
+				$order->lat 			= str_replace('.', '', $item['orderDetailUserDTO']['userAddressLat']);
+				$order->log 			= str_replace('.', '', $item['orderDetailUserDTO']['userAddressLng']);
+				$order->order_index 	= $item['orderDetailBizDTO']['orderIndex'];
+				$order->itemCount 		= $item['orderDetailGoodsDTO']['goodsTotalNum'];
+				$order->status 			= $status == $this->changeStatus ? -1 : 1;
+				$order->addtime 		= time();
+				$order->juli 			= strtolower($item['orderDetailBizDTO']['distance']);
+				if(strpos($order->juli, 'km')){
+					$order->juli 		= intval(str_replace('km', '', $order->juli))*1000;
+				}else{
+					$order->juli 		= intval(str_replace('m', '', $order->juli));
+				}
+				$order->weight 			= array_sum(array_column($item['orderDetailGoodsDTO']['goodsList'], 'fixWeight'));
+				$order->comments 		= implode(';;', array_column($item['orderDetailBizDTO']['orderRemarkList'], 'remarkContext'));
+				$order->pack_status 	= $status;
+				$order->pack_status_desc= $item['orderDetailBizDTO']['statusDesc'];
+				Order::saveOrigin(json_encode($item, JSON_UNESCAPED_UNICODE), date('Ymd', $order->createTime) . '/' . $orderId . '-' . $status . '.txt');
+
+				foreach($otherCost['orderDiscount']['discountDistributeList'] as $vvc){
+					switch($vvc['title']){
+						case '商家补贴合计':
+							$order->butie 			= $this->price($vvc['price'])[0];
+							break;
+						case '平台补贴合计':
+							$order->butie_platform 	= $this->price($vvc['price'])[0];
+							break;
+
+					}
+				}
+				if(isset($otherCost['orderDiscount']['discountInfoList'][0]['list'])){
+					$order->butie_details 	= implode(',', array_column($otherCost['orderDiscount']['discountInfoList'][0]['list'], 'activityName'));//补贴说明
+				}
+				$order->save();
+
+				$productDbArr 			= [];
+				foreach($item['orderDetailGoodsDTO']['goodsList'] as $product){
+					$skuid 				= $product['skuId'] ?? $product['itemId'];
+					$skuTableId 		= 0;
+					if(isset($tableSkuIds[$skuid])){
+						$skuTableId 	= $tableSkuIds[$skuid];
+					}else{
+						$row 			= Sku::where('sku_id', $skuid)->where('platform', $platform_id)->where('store_id', $order->store_id)->first();
+						if($row){
+							$tableSkuIds[$skuid] 	= $row->id;
+							$skuTableId 			= $row->id;
+						}
+					}
+
+					$productDbArr[] 	= [
+						'order_id'			=> $orderId,
+						'sku_id'			=> $product['ext']['storeAttr']['skuId'],
+						'orderItemId'		=> $product['subOrderId'],
+						'quantity'			=> $product['number'],
+						'upc'				=> $product['ext']['storeAttr']['upcCode'],
+						'storeId'			=> $order->store_id,
+						'spec'				=> implode(',', array_column($product['ext']['propertyLabel'], 'detail')),
+						'title'				=> $product['name'],
+						'customSkuId'		=> $product['ext']['extCode'],
+						'platform_id'		=> $order->platform_id,
+						'itemSkuId'			=> $skuid,
+						'sku_table_id'		=> $skuTableId,
+						'createtime'		=> $order->createTime,
+					];
+				}
+				if(!empty($productDbArr)){
+					OrderProduct::insert($productDbArr);
+				}
+				$this->newOrderid[] 	= $orderId;
+			}else{
+				$order 		= $orders[$orderId];
 			}
+
+
+			$deliveryList 			= $item['orderDetailDeliveryDTO']['deliveryTimeLine'];
+			$start 					= $deliveryList[0]['timeLineTime'] ?? 0;
+			$end 					= $deliveryList[count($deliveryList) - 1]['timeLineTime'] ?? 0;
+			$order->used_time 		= (int)(($end-$start) / 1000);
+			if($order->used_time < 0){
+				$order->used_time 	= 0;
+			}
+
+			foreach($deliveryList as $pcv){
+				switch($pcv['title']){
+					case '商家已接单'://接单开始时间
+						$order->jiedan_time = $order->pack_time	= $pcv['timeLineTime'] / 1000;
+					break;
+					case '商家呼叫配送'://拣货完成时间
+						$order->pack_end_time 	= $pcv['timeLineTime'] / 1000;
+					break;
+					case '骑士已取货'://配送开始时间
+						$order->ship_time 		= $pcv['timeLineTime'] / 1000;
+					break;
+					case 8://完成时间
+						$order->done_time 		= $pcv['timeLineTime'] / 1000;
+					break;
+				}
+				if(strpos($pcv['title'], '订单已送达') !== false){
+					$order->ship_end_time = $order->done_time 	= $pcv['timeLineTime'] / 1000;
+				}
+			}
+
+
+			if($status == $this->changeStatus && $order->orderStatus != $status){//如果退单,则要同步加库存
+				$res 	= OrderProduct::where('order_id', $orderId)->get();
+				if($res){
+					Log::info('饿了么订单编号[' . $orderId . ']: 用户取消,执行退回库存!');
+					foreach($res as $aksc){//逐个商品退回库存
+						$aksc->rebackStocks();
+					}
+				}
+				$order->status 				= -1;
+			}
+
+			$order->orderStatus 		= $status;
+			$order->orderStatusDesc 	= $item['orderDetailBizDTO']['statusDesc'];
+			$order->save();
 		}
+
+
+		// foreach($data as $item){
+		// 	$this->fmtrow($item);
+		// 	if(!$this->status){
+		// 		break;
+		// 	}
+		// }
 	}
 
 	public function render(){//返回的是product_skus表的id对应本次列表下单的总数量
+		return $this->newOrderid;
 		$platform_order_ids		= [];
 		if($this->status === true){
 			DB::transaction(function () {
@@ -172,11 +316,19 @@ class SaveOrders extends Eleme{
 
 
 	//提取订单列表的 orderid
-	private function getOrderIds(){
+	private function getOrderIds($data){
 		$orderids 		= [];
-		foreach($this->data as $item){
+		foreach($data as $item){
 			$orderids[] 	= $item['orderDetailBizDTO']['orderId'];
 		}
 		return $orderids;
+	}
+
+	/**
+	 * 提取数字
+	 */
+	private function price($val){
+		preg_match_all('`[\d\.]+`', $val, $nn);
+		return isset($nn[0][0]) ? $nn[0] : [''];
 	}
 }

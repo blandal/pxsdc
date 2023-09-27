@@ -12,15 +12,15 @@ class GetOrders extends Eleme{
 	protected $uri 		= 'mtop.ele.newretail.order.seller.QueryPcService.getOrderRecord';
 	protected $method 	= 'get';
 	protected $args 	= [
-		'start_timestamp'	=> 0,
-		'end_timestamp'		=> 0,
-		'order_status'		=> 0,
-		'shop_id'			=> '',
+		// 'start_timestamp'	=> 0,
+		// 'end_timestamp'		=> 0,
+		// 'order_status'		=> 0,
+		// 'shop_id'			=> '',
 		'page'				=> 1,
 	];
 
 	public function __construct(){
-		$this->args['end_timestamp'] 		= time();
-		$this->args['start_timestamp'] 		= $this->args['end_timestamp'] - 86400;
+		// $this->args['end_timestamp'] 		= time();
+		// $this->args['start_timestamp'] 		= $this->args['end_timestamp'] - 86400;
 	}
 }

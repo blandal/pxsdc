@@ -173,6 +173,16 @@ class Meituan implements Factory{
 	}
 
 	/**
+	 * 获取订单详情 - 美团牵牛花特有
+	 */
+	public function getOrderInfo($channelId, $orderId){
+		$this->method 	= (new \App\Takeaways\Meituans\GetOrderInfo())
+				->channelId($channelId)
+				->orderId($orderId);
+		return $this();
+	}
+
+	/**
 	 * 修改sku库存
 	 * @return App\Takeaways\Meituans\ChangeStock
 	 */

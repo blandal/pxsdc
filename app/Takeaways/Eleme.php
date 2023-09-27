@@ -227,11 +227,17 @@ class Eleme implements Factory{
 	/**
 	 * 获取订单列表
 	 */
-	public function getOrders(int $page = 1, int $pagesize = 10){
-		$this->method 	= (new \App\Takeaways\Elemes\GetOrders())
-				->page($page);
+	public function getOrders(int $page = 1, int $pagesize = 10, string $keyword = ''){
+		$this->method 	= (new \App\Takeaways\Elemes\GetOrders())->page($page);
+		if($keyword != ''){
+			$this->method->keyword($keyword);
+		}else{
+			$now 		= time();
+			$this->method->start_timestamp(0)->end_timestamp(0)->order_status(0)->shop_id('')->end_timestamp($now)->start_timestamp($now - 86400);
+		}
 		return $this();
 	}
+
 
 	/**
 	 * 修改sku库存

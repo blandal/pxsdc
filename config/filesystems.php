@@ -53,6 +53,13 @@ return [
             'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', false),
         ],
 
+        'orders' => [
+            'driver' => 'local',
+            'root' => storage_path('app/orders'),
+            'url' => env('APP_URL').'/storage',
+            'visibility' => 'orders',
+        ],
+
     ],
 
     /*

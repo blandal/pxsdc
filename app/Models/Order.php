@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use App\Takeaways\Factory;
 // use Illuminate\Support\Facades\DB;
 use App\Models\OrderProduct;
+use Illuminate\Support\Facades\Storage;
 
 class Order extends Model{
     use HasFactory;
@@ -34,5 +35,17 @@ class Order extends Model{
             }
         }
         $this->attributes['status']     = $val;
+    }
+
+    /**
+     * 保存订单原始内容为文件
+     * 原始内容不再存储在数据库
+     */
+    public function saveOrigin(string $content, $filename){
+        $filename   = 'orders/' . ltrim($filename, '/');
+        if(!Storage::disk('orders')->exists($filename)){
+            Storage::put($filename, $content);
+        }
+        return true;
     }
 }
