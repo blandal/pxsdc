@@ -48,6 +48,7 @@ class SaveOrders extends Meituan{
 		foreach(Order::whereIn('orderid', $orderIds)->where('platform_id', $this->platform)->where('store_id', $store->store_id)->get() as $item){
 			$orders[$item->orderid] 	= $item;
 		}
+		$tableSkuIds 		= [];
 
 		foreach($data as $item){
 			$channelId 			= $item['channelId'];
@@ -117,26 +118,64 @@ class SaveOrders extends Meituan{
 				Order::saveOrigin(json_encode($item, JSON_UNESCAPED_UNICODE), date('Ymd', $order->createTime) . '/' . $orderId . '-' . $status . '.txt');
 				$order->save();
 
-				$getSkuIds 				= array_column($item['productList'], 'skuId');
-				$skus 					= Sku::whereIn('sku_id', $getSkuIds)->pluck('id', 'sku_id')->toArray();
-				$productDbArr 			= [];
-				foreach($orderInfo['itemInfo'] as $product){
-					$productDbArr[] 	= [
-						'order_id'			=> $orderId,
-						'sku_id'			=> $product['sku'],
-						'orderItemId'		=> $product['orderItemId'],
-						'quantity'			=> $product['quantity'],
-						'upc'				=> $product['upc'],
-						'storeId'			=> $order->store_id,
-						'spec'				=> $product['spec'],
-						'title'				=> $product['skuName'],
-						'customSkuId'		=> $product['customSkuId'],
-						'platform_id'		=> $this->platform,
-						'sku_table_id'		=> $skus[$product['sku']] ?? null,
-						'createtime'		=> $order->createTime,
-					];
+				//获取产品sku
+				$orderProducts 		= json_decode($store->getInstances()->orderProducts($orderId), true);
+				if(!isset($orderProducts['data']['itemInfo'])){
+					return $this->seterr($orderId . ' 获取商品详情失败!');
 				}
+				try {
+					foreach($orderProducts['data']['itemInfo'] as $item){
+						$skuid 				= $item['sku'];
+						$skuTableId 		= 0;
+						if(isset($tableSkuIds[$skuid])){
+							$skuTableId 	= $tableSkuIds[$skuid];
+						}else{
+							$row 			= Sku::where('sku_id', $skuid)->where('platform', $this->platform)->where('store_id', $store->store_id)->first();
+							if($row){
+								$tableSkuIds[$skuid] 	= $row->id;
+								$skuTableId 			= $row->id;
+							}
+						}
+						$productDbArr[] 		= [
+							'order_id'			=> $orderId,
+							'sku_id'			=> $item['sku'],
+							'orderItemId'		=> $item['orderItemId'],
+							'quantity'			=> $item['orderQuantity'],
+							'upc'				=> $item['upc'],
+							'storeId'			=> $store->store_id,
+							'spec'				=> $item['spec'],
+							'title'				=> $item['skuName'],
+							'customSkuId'		=> $item['customSkuId'],
+							'platform_id'		=> $this->platform,
+							'sku_table_id'		=> $skuTableId,
+							'createtime'		=> $order->createTime,
+						];
+					}
+				} catch (\Exception $e) {
+					return $this->seterr($e->getMessage());
+				}
+
+				// $getSkuIds 				= array_column($item['productList'], 'skuId');
+				// $skus 					= Sku::whereIn('sku_id', $getSkuIds)->pluck('id', 'sku_id')->toArray();
+				// $productDbArr 			= [];
+				// foreach($orderInfo['itemInfo'] as $product){
+				// 	$productDbArr[] 	= [
+				// 		'order_id'			=> $orderId,
+				// 		'sku_id'			=> $product['sku'],
+				// 		'orderItemId'		=> $product['orderItemId'],
+				// 		'quantity'			=> $product['quantity'],
+				// 		'upc'				=> $product['upc'],
+				// 		'storeId'			=> $order->store_id,
+				// 		'spec'				=> $product['spec'],
+				// 		'title'				=> $product['skuName'],
+				// 		'customSkuId'		=> $product['customSkuId'],
+				// 		'platform_id'		=> $this->platform,
+				// 		'sku_table_id'		=> $skus[$product['sku']] ?? null,
+				// 		'createtime'		=> $order->createTime,
+				// 	];
+				// }
 				if(!empty($productDbArr)){
+					// dd($productDbArr, $tableSkuIds);
 					OrderProduct::insert($productDbArr);
 				}
 				$this->newOrderid[] 	= $orderId;
