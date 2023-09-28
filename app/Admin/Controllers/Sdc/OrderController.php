@@ -111,6 +111,14 @@ class OrderController extends AdminController
             return $val > 1000 ? sprintf('%.1f', ($val / 1000)) . '公里' : $val . '米';
         });
 
+        $grid->disableCreateButton();
+        $grid->disableActions();//禁用行操作列
+        $grid->disableFilter();//禁用查询过滤器
+        $grid->actions(function ($actions) {
+            $actions->disableDelete();
+            $actions->disableEdit();
+            $actions->disableView();
+        });
         return $grid;
     }
 
