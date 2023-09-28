@@ -9,6 +9,7 @@ use Encore\Admin\Grid;
 use Encore\Admin\Show;
 use App\Models\Platform;
 use App\Models\Store;
+use Encore\Admin\Widgets\Table;
 
 class OrderController extends AdminController
 {
@@ -30,11 +31,17 @@ class OrderController extends AdminController
         $grid->model()->orderByDesc('createTime');
         $pltsArr    = Platform::pluck('svg', 'id')->toArray();
         $stores     = Store::pluck('title', 'store_id')->toArray();
+        $statusDesc = Order::groupBy('orderStatusDesc')->pluck('orderStatusDesc', 'orderStatusDesc')->toArray();
 
         // $grid->column('id', __('ID'));
         $grid->column('order_index', __('编号'))->display(function($val){
             return '#' . $val;
-        })->sortable()->filter();
+        })->sortable()->filter()->expand(function ($model) {
+            $comments = $model->products()->take(50)->get()->map(function ($comment) {
+                return $comment->only(['upc', 'title', 'spec', 'quantity']);
+            });
+            return new Table(['UPC', '标题', '规格', '数量'], $comments->toArray());
+        });
         $grid->column('createTime', __('下单时间'))->display(function($val){
             return $val ? date('m-d H:i:s', $val) : null;
         })->filter('range', 'datetime');
@@ -84,30 +91,30 @@ class OrderController extends AdminController
         // $grid->column('pack_status', __('Pack status'));
         $grid->column('pack_status_desc', __('包裹状态'))->hide();
         // $grid->column('used_time', __('Used time'));
-        $grid->column('jiedan_time', __('接单时间'))->display(function($val){
-            return $val ? date('Y-m-d H:i:s', $val) : null;
+        $grid->column('jiedan_time', __('接单'))->display(function($val){
+            return $val ? date('H:i:s', $val) : null;
         })->hide();
-        $grid->column('pack_time', __('打包开始'))->display(function($val){
-            return $val ? date('Y-m-d H:i:s', $val) : null;
+        $grid->column('pack_time', __('打包'))->display(function($val){
+            return $val ? date('H:i:s', $val) : null;
         })->hide();
         $grid->column('pack_end_time', __('打包完成'))->display(function($val){
-            return $val ? date('Y-m-d H:i:s', $val) : null;
+            return $val ? date('H:i:s', $val) : null;
         })->hide();
-        $grid->column('ship_time', __('配送开始'))->display(function($val){
-            return $val ? date('Y-m-d H:i:s', $val) : null;
+        $grid->column('ship_time', __('配送'))->display(function($val){
+            return $val ? date('H:i:s', $val) : null;
         })->hide();
         $grid->column('ship_end_time', __('配送完成'))->display(function($val){
-            return $val ? date('Y-m-d H:i:s', $val) : null;
+            return $val ? date('H:i:s', $val) : null;
         })->hide();
         $grid->column('done_time', __('完成时间'))->display(function($val){
-            return $val ? date('Y-m-d H:i:s', $val) : null;
+            return $val ? date('H:i:s', $val) : null;
         })->hide();
-        $grid->column('orderStatusDesc', __('状态'));
-        $grid->column('user_tags', __('用户标签'))->filter('like');
+        $grid->column('orderStatusDesc', __('状态'))->filter($statusDesc);
+        $grid->column('user_tags', __('标签'))->filter('like')->width(80);
         $grid->column('username', __('下单人'))->filter('like');
         $grid->column('phone', __('电话'))->filter('like');
         $grid->column('address', __('地址'))->width(100)->filter('like');
-        $grid->column('juli', __('配送距离'))->filter('range')->sortable()->display(function($val){
+        $grid->column('juli', __('距离'))->filter('range')->sortable()->display(function($val){
             return $val > 1000 ? sprintf('%.1f', ($val / 1000)) . '公里' : $val . '米';
         });
 

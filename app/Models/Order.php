@@ -13,6 +13,10 @@ class Order extends Model{
     use HasFactory;
     public $timestamps     = false;
 
+    public function products(){
+        return $this->hasMany('App\Models\OrderProduct', 'order_id', 'orderid');
+    }
+
     /**
      * 将平台传递的订单列表信息写入数据库,也就是采集入库
      */
