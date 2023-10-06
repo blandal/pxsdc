@@ -10,6 +10,7 @@ use Encore\Admin\Show;
 use App\Models\Platform;
 use App\Models\Store;
 use Encore\Admin\Widgets\Table;
+use App\Admin\Extensions\Tools\Orders;
 
 class OrderController extends AdminController
 {
@@ -18,7 +19,7 @@ class OrderController extends AdminController
      *
      * @var string
      */
-    protected $title = 'Order';
+    protected $title = '订单';
 
     /**
      * Make a grid builder.
@@ -125,6 +126,9 @@ class OrderController extends AdminController
             $actions->disableDelete();
             $actions->disableEdit();
             $actions->disableView();
+        });
+        $grid->tools(function ($tools) {
+            $tools->append(new Orders());
         });
         return $grid;
     }
