@@ -66,6 +66,7 @@ class Sku extends Model{
         $content            = [];
         foreach($skus as $item){
             if($createtime > 0 && $item->stockupdate >= $createtime){
+                Log::debug('订单时间小于库存更新时间,不做修改!' . $item->id);
                 continue;
             }
             //同平台同店铺的不更新其他绑定的sku, 防止绑定sku出差导致库存多扣除

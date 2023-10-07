@@ -17,6 +17,8 @@ use Illuminate\Support\Facades\Log;
  * orderDetailDeliveryDTO.deliveryParty 配送模式id(2)
  * orderDetailDeliveryDTO.deliveryPartyDesc 配送模式(众包-跑腿)
  * orderDetailDeliveryDTO.shopPickedTakeTime 拣货时长(拣货用时 14分39秒)
+ * 4099450128299691538 退款订单号
+ * 4002110128273411679 部分退款单号
  */
 
 
@@ -162,16 +164,26 @@ class SaveOrders extends Eleme{
 				}
 			}
 
-
-			if($status == $this->changeStatus && $order->orderStatus != $status){//如果退单,则要同步加库存
-				$res 	= OrderProduct::where('order_id', $orderId)->get();
-				if($res){
-					Log::info('饿了么订单编号[' . $orderId . ']: 用户取消,执行退回库存!');
-					foreach($res as $aksc){//逐个商品退回库存
-						$aksc->rebackStocks();
+			// if($status == $this->changeStatus && $order->orderStatus != $status){//如果退单,则要同步加库存
+			// 	$res 	= OrderProduct::where('order_id', $orderId)->get();
+			// 	if($res){
+			// 		Log::info('饿了么订单编号[' . $orderId . ']: 用户取消,执行退回库存!');
+			// 		foreach($res as $aksc){//逐个商品退回库存
+			// 			$aksc->rebackStocks();
+			// 		}
+			// 	}
+			// 	$order->status 				= -1;
+			// }
+			if(!empty($item['orderDetailReverseDTO']['refundOrderInfoList'])){//不管订单什么状态,有这个列表在的统一是退库存的
+				$order->status 		= -2;
+				foreach($item['orderDetailReverseDTO']['refundOrderInfoList'] as $refund){
+					foreach($refund['refundOrderProductList'] as $rrrs){
+						$row 			= OrderProduct::where(['sku_id' => $rrrs['ext']['storeAttr']['skuId'], 'order_id' => $orderId, 'itemSkuId' => $rrrs['itemId']])->first();
+						$row->rebackStocks($rrrs['number']);
 					}
 				}
-				$order->status 				= -1;
+			}elseif($status == $this->changeStatus){
+				$order->status 		= -1;
 			}
 
 			$order->orderStatus 		= $status;

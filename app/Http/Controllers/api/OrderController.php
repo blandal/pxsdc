@@ -48,7 +48,7 @@ class OrderController extends Controller{
             return $this->error('data 数据解析错误!');
         }
 
-        try {
+        // try {
             $instance   = Store::getInstance($storeid, $platform);//where('store_id', $storeid)->where('platform_id', $platform)->first();
             $orderids   = $instance->saveOrders($list);
             if(empty($orderids)){
@@ -57,9 +57,9 @@ class OrderController extends Controller{
             }
             Sku::updateFromPlatformOrders($orderids, $platform, $storeid);
             return $this->success(null, '成功!');
-        } catch (\Exception $e) {
-            return $this->error($e->getMessage());
-        }
+        // } catch (\Exception $e) {
+        //     return $this->error($e->getMessage());
+        // }
     }
 
     public function setorder(Request $request){

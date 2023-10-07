@@ -25,6 +25,7 @@ class SaveOrders extends Meituan{
 	private $stores 	= [];
 	private $platformObj= [];
 	private $changeStatus 	= 25;
+	private $doneStatus 	= 15;
 	private $opIds 		= [];
 
 	//闪电仓参数
@@ -101,7 +102,6 @@ class SaveOrders extends Meituan{
 						$order->log 		= $orderLl['pageList'][0]['address_longitude'];
 					}
 				} catch (\Exception $e) {
-					// dd($e->getMessage());
 					Log::error('获取闪仓订单经纬度失败! - ' . $orderId);
 				}
 				try {
@@ -154,26 +154,6 @@ class SaveOrders extends Meituan{
 				} catch (\Exception $e) {
 					return $this->seterr($e->getMessage());
 				}
-
-				// $getSkuIds 				= array_column($item['productList'], 'skuId');
-				// $skus 					= Sku::whereIn('sku_id', $getSkuIds)->pluck('id', 'sku_id')->toArray();
-				// $productDbArr 			= [];
-				// foreach($orderInfo['itemInfo'] as $product){
-				// 	$productDbArr[] 	= [
-				// 		'order_id'			=> $orderId,
-				// 		'sku_id'			=> $product['sku'],
-				// 		'orderItemId'		=> $product['orderItemId'],
-				// 		'quantity'			=> $product['quantity'],
-				// 		'upc'				=> $product['upc'],
-				// 		'storeId'			=> $order->store_id,
-				// 		'spec'				=> $product['spec'],
-				// 		'title'				=> $product['skuName'],
-				// 		'customSkuId'		=> $product['customSkuId'],
-				// 		'platform_id'		=> $this->platform,
-				// 		'sku_table_id'		=> $skus[$product['sku']] ?? null,
-				// 		'createtime'		=> $order->createTime,
-				// 	];
-				// }
 				if(!empty($productDbArr)){
 					// dd($productDbArr, $tableSkuIds);
 					OrderProduct::insert($productDbArr);
@@ -213,15 +193,50 @@ class SaveOrders extends Meituan{
 			}
 
 
-			if($status == $this->changeStatus && $order->orderStatus != $status){//如果退单,则要同步加库存
-				$res 	= OrderProduct::where('order_id', $orderId)->get();
-				if($res){
-					Log::info('美团订单编号[' . $orderId . ']: 用户取消,执行退回库存!');
-					foreach($res as $vvzzs){//逐个商品退回库存
-						$vvzzs->rebackStocks();
+			if($this->doneStatus == $status){//已完成的情况需要判断是否有部分退款情况
+				$orderTags 	= $item['orderTagList'] ?? [];
+				$bufentui 	= false;
+				foreach($orderTags as $ots){
+					if(strpos($ots['name'], '退单') !== false){//有退单的情况
+						$bufentui 	= true;
+						break;
 					}
 				}
+				if($bufentui === true && $order->status != -2){//订单信息中如果有部分退款,则获取订单商品详情查看部分退款商品详情,并执行库存增加
+					$res 		= $store->getInstances()->getOrderInfo($channelId, $orderId);
+					$orderInfo 	= json_decode($res, true);
+					if(!$orderInfo){
+						continue;
+					}
+					$orderInfo 				= $orderInfo['data'];
+					$refundOrderProducts 	= [];
+					foreach($orderInfo['itemInfo'] as $info){
+						if(isset($info['refundCount']) && $info['refundCount'] <= $info['realQuantity']){
+							$refundOrderProducts[] 	= ['orderItemId' => $info['orderItemId'], 'sku_id' => $info['sku'], 'count' => $info['refundCount']];
+						}
+					}
+					if(!empty($refundOrderProducts)){
+						foreach($refundOrderProducts as $refound){
+							$refoundRow 	= OrderProduct::where(['orderItemId' => $refound['orderItemId'], 'sku_id' => $refound['sku_id']])->first();
+							dd($refoundRow);
+							if($refoundRow){
+								$refoundRow->rebackStocks($refound['count']);
+							}
+						}
+					}
+					$order->status 				= -2;
+				}
+			}elseif($status == $this->changeStatus){//订单状态是取消
 				$order->status 				= -1;
+				if($order->orderStatus != $status){//如果当前订单状态和上传的不一致
+					$res 	= OrderProduct::where('order_id', $orderId)->get();
+					if($res){
+						Log::info('美团订单编号[' . $orderId . ']: 用户取消,执行退回库存!');
+						foreach($res as $vvzzs){//逐个商品退回库存
+							$vvzzs->rebackStocks();
+						}
+					}
+				}
 			}
 
 			$order->orderStatus 		= $status;

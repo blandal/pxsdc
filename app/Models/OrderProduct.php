@@ -68,7 +68,12 @@ class OrderProduct extends Model{
     //     $this->attributes['status']     = $val;
     // }
 
-    public function rebackStocks(){
+    /**
+     * 退款订单产品的库存
+     * @param $num  int     退款库存数量,0为当前产品下单的全部库存
+     * @return bool
+     */
+    public function rebackStocks($num = 0){
         if($this->status == -1){//已经执行过退单,不继续执行
             return true;
         }
@@ -76,17 +81,24 @@ class OrderProduct extends Model{
         if($this->sync == 0){//该订单并未执行库存同步,不继续执行
             return true;
         }
+
         $sku            = $this->skurow;
         if(!$sku) return true;
-
-        $sku->stocks    += $this->quantity;
+        if($num <= 0){
+            $num        = $this->quantity;
+        }elseif($num > $this->quantity){
+            $num        = $this->quantity;
+        }
+        $sku->stocks    += $num;
         $bind           = $sku->bind;
+        $sku->save();
         if(!$bind){
+            Log::info('库存已退回,没有绑定的sku [order_products] 表的id为: ' . $this->id);
             return true;
         }
-        if($sku->changeStock($this->quantity*-1, $sku->platform . ':' . $sku->store_id . '['.$this->order_id.']' . ' - 订单取消退回库存.', 0, 1) == true){
+        if($sku->changeStock($num*-1, $sku->platform . ':' . $sku->store_id . '['.$this->order_id.']' . ' - 订单取消退回库存.' . $num, 0, 1) == true){
+            $this->refund   = $num;
             $this->status   = -1;
-            $sku->save();
             Log::info('库存回退成功! [order_products] 表的id为: ' . $this->id);
             return $this->save();
         }
