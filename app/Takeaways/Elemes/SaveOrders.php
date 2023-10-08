@@ -178,7 +178,7 @@ class SaveOrders extends Eleme{
 				$order->status 		= -2;
 				foreach($item['orderDetailReverseDTO']['refundOrderInfoList'] as $refund){
 					foreach($refund['refundOrderProductList'] as $rrrs){
-						$row 			= OrderProduct::where(['sku_id' => $rrrs['ext']['storeAttr']['skuId'], 'order_id' => $orderId, 'itemSkuId' => $rrrs['itemId']])->first();
+						$row 			= OrderProduct::where(['sku_id' => $rrrs['ext']['storeAttr']['skuId'], 'order_id' => $orderId])->first();
 						if($row){
 							$row->rebackStocks($rrrs['number']);
 						}else{
