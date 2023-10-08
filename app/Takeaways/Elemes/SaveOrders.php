@@ -181,6 +181,8 @@ class SaveOrders extends Eleme{
 						$row 			= OrderProduct::where(['sku_id' => $rrrs['ext']['storeAttr']['skuId'], 'order_id' => $orderId, 'itemSkuId' => $rrrs['itemId']])->first();
 						if($row){
 							$row->rebackStocks($rrrs['number']);
+						}else{
+							Logs::error('饿了么产品订单:' . $rrrs['ext']['storeAttr']['skuId'] . '--' . $orderId . '--' . $rrrs['itemId']);
 						}
 					}
 				}
