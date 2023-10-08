@@ -218,7 +218,6 @@ class SaveOrders extends Meituan{
 					if(!empty($refundOrderProducts)){
 						foreach($refundOrderProducts as $refound){
 							$refoundRow 	= OrderProduct::where(['orderItemId' => $refound['orderItemId'], 'sku_id' => $refound['sku_id']])->first();
-							dd($refoundRow);
 							if($refoundRow){
 								$refoundRow->rebackStocks($refound['count']);
 							}
