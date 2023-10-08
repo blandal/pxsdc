@@ -182,7 +182,7 @@ class SaveOrders extends Eleme{
 						if($row){
 							$row->rebackStocks($rrrs['number']);
 						}else{
-							Logs::error('饿了么产品订单:' . $rrrs['ext']['storeAttr']['skuId'] . '--' . $orderId . '--' . $rrrs['itemId']);
+							Log::error('饿了么产品订单:' . $rrrs['ext']['storeAttr']['skuId'] . '--' . $orderId . '--' . $rrrs['itemId']);
 						}
 					}
 				}
