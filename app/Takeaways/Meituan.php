@@ -178,7 +178,7 @@ class Meituan implements Factory{
 	 * 美团特有
 	 */
 	public function getOrderInfo($channelId, $orderId){
-		$this->method 	= (new \App\Takeaways\Meituans\getOrderInfo())
+		$this->method 	= (new \App\Takeaways\Meituans\GetOrderInfo())
 				->channelId($channelId)
 				->orderId($orderId);
 		return $this();
