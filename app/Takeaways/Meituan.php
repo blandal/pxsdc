@@ -102,7 +102,7 @@ class Meituan implements Factory{
 			$title 				= $row['name'];
 			foreach($row['storeSkuList'] as $item){
 				$skuid 		= $item['skuId'];
-				if(isset($originSkus[$skuid])){
+				if(isset($originSkus[$skuid]) && $originSkus[$skuid]){
 					$skuRow 	= $originSkus[$skuid];
 					if($skuRow->stocks != $skku[$skuid]['stocks']){
 						LogStock::insert([
@@ -113,6 +113,8 @@ class Meituan implements Factory{
 			                'content'   => $skuRow->stocks . '->' . $skku[$skuid]['stocks'],
 			                'take_time' => 0,
 			            ]);
+					}else{
+						log::error('牵牛花 ' . $skuid . ' 不存在!, 更新本地库存失败!');
 					}
 					unset($originSkus[$skuid]);
 					$skuRow->upc 		= $item['upc'];
@@ -169,16 +171,6 @@ class Meituan implements Factory{
 		$this->method 	= (new \App\Takeaways\Meituans\GetOrders())
 				->page($page)
 				->pageSize($pagesize);
-		return $this();
-	}
-
-	/**
-	 * 获取订单详情 - 美团牵牛花特有
-	 */
-	public function getOrderInfo($channelId, $orderId){
-		$this->method 	= (new \App\Takeaways\Meituans\GetOrderInfo())
-				->channelId($channelId)
-				->orderId($orderId);
 		return $this();
 	}
 
