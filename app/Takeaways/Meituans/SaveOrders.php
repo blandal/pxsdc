@@ -45,6 +45,10 @@ class SaveOrders extends Meituan{
 			$data 	= $data['orderList'];
 		}
 		$orderIds 			= array_column($data, 'channelOrderId');
+		if(!$store){
+			Log::error('店铺不存在!' . implode(",", $orderIds));
+			return;
+		}
 		$orders 			= [];
 		foreach(Order::whereIn('orderid', $orderIds)->where('platform_id', $this->platform)->where('store_id', $store->store_id)->get() as $item){
 			$orders[$item->orderid] 	= $item;
