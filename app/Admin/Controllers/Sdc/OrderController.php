@@ -38,10 +38,13 @@ class OrderController extends AdminController
         $grid->column('order_index', __('编号'))->display(function($val){
             return '#' . $val;
         })->sortable()->filter()->expand(function ($model) {
-            $comments = $model->products()->take(50)->get()->map(function ($comment) {
-                return $comment->only(['upc', 'title', 'spec', 'quantity']);
+            $comments = $model->products()->take(100)->get()->map(function ($comment) {
+                $kuweima    = $comment->getKuweima();
+                $arr        = $comment->only(['upc', 'title', 'spec', 'quantity']);
+                $arr['kuweima']     = $kuweima;
+                return $arr;
             });
-            return new Table(['UPC', '标题', '规格', '数量'], $comments->toArray());
+            return new Table(['UPC', '标题', '规格', '数量', '库位码'], $comments->toArray());
         });
         $grid->column('createTime', __('下单时间'))->display(function($val){
             return $val ? date('m-d H:i:s', $val) : null;

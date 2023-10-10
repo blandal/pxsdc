@@ -105,4 +105,19 @@ class OrderProduct extends Model{
         Log::error('库存回退失败! [order_products] 表的id为: ' . $this->id);
         return false;
     }
+
+    public function getKuweima(){
+        if(!$this->sku_table_id){
+            return null;
+        }
+        $sku        = Sku::find($this->sku_table_id);
+        if($this->platform_id == 1){
+            return $sku->kuweima;
+        }
+        if($sku->bind){
+            $sku        = Sku::find(explode(',', $sku->bind)[0]);
+            return $sku->kuweima;
+        }
+        return null;
+    }
 }
