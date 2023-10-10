@@ -41,4 +41,23 @@ class IndexController extends Controller{
             return $this->success('成功修改: ' . count($ids) . ' 个!');
         }
     }
+
+    /**
+     * 更新店铺cookie
+     */
+    public function cookie(Request $request){
+        $platform   = $request->post('platform');
+        $store      = $request->post('store_id');
+        $cookie     = $request->post('cookie');
+
+        $s          = Store::where(['platform_id' => $platform, 'store_id' => $store])->first();
+        if(!$s){
+            return $this->error('店铺不存在!');
+        }
+        $s->cookie  = $cookie;
+        if($s->save()){
+            return $this->success('cookie更新成功!');
+        }
+        return $this->error('cookie 更新失败!');
+    }
 }

@@ -30,6 +30,7 @@ Route::get('/autolink', 'App\Http\Controllers\api\ProductController@autolink')->
 Route::get('/upccheck', 'App\Http\Controllers\api\ProductController@upccheck')->name('api.upccheck');//upc错误检查
 Route::get('/syncMt2Elm', 'App\Http\Controllers\api\ProductController@syncMt2Elm')->name('api.syncMt2Elm');//upc错误检查
 Route::get('/setorder', 'App\Http\Controllers\api\OrderController@setorder');
+Route::post('/cookie', 'App\Http\Controllers\api\IndexController@cookie')->name('api.cookie');//更新店铺cookie
 
 Route::get('/elesigns', function(){
     $arr        = [
