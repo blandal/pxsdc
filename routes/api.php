@@ -31,6 +31,7 @@ Route::get('/upccheck', 'App\Http\Controllers\api\ProductController@upccheck')->
 Route::get('/syncMt2Elm', 'App\Http\Controllers\api\ProductController@syncMt2Elm')->name('api.syncMt2Elm');//upc错误检查
 Route::get('/setorder', 'App\Http\Controllers\api\OrderController@setorder');
 Route::post('/cookie', 'App\Http\Controllers\api\IndexController@cookie')->name('api.cookie');//更新店铺cookie
+Route::get('/banknumber', 'App\Http\Controllers\api\IndexController@banknumber');//更新美团的商品库位码
 
 Route::get('/elesigns', function(){
     $arr        = [

@@ -219,6 +219,19 @@ class Meituan implements Factory{
 	}
 
 	/**
+	 * 商品库存查询
+	 * @return string
+	 */
+	public function banknumber(int $page, int $pageSize = 0){
+		$this->method 	= (new \App\Takeaways\Meituans\Banknumber())
+				->page($page);
+		if($pageSize > 0){
+			$this->method->pageSize($pageSize);
+		}
+		return $this();
+	}
+
+	/**
 	 * 发起请求并返回结果
 	 * @return string
 	 */

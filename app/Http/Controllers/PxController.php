@@ -8,6 +8,7 @@ use Facebook\WebDriver\Remote\RemoteWebDriver;
 use Facebook\WebDriver\Remote\DesiredCapabilities;
 use Facebook\WebDriver\WebDriverBy;
 use Facebook\WebDriver\Firefox\FirefoxOptions;
+use App\Models\Store;
 
 class PxController extends Controller{
     public function index(Request $request){

@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 
 use App\Models\ProductSku;
 use App\Models\Store;
+use App\Models\Sku;
 class IndexController extends Controller{
     public function stocks2z(Request $request){//将平台库存设置未0
         return $this->error('功能暂未开放!');
@@ -59,5 +60,53 @@ class IndexController extends Controller{
             return $this->success('cookie更新成功!');
         }
         return $this->error('cookie 更新失败!');
+    }
+
+    /**
+     * 更新美团商品库位码
+     */
+    public function banknumber(Request $request){
+        $pagesize       = 50;
+        $page           = 1;
+        $storeid        = 1046462;
+        $platform       = 1;
+
+        $store          = Store::where(['platform_id' => $platform,'store_id' => $storeid])->first();
+        if(!$store){
+            return $this->error('店铺不存在!');
+        }
+        $instance       = $store->getInstances();
+
+        $nums           = 0;
+        $hads           = 0;
+        while (true) {
+            $str    = $instance->banknumber($page++);
+            $data   = json_decode($str, true);
+            if(!isset($data['code'])){
+                return $this->error($str);
+            }
+            if($data['code'] != 0){
+                return $this->error($data['msg']);
+            }
+            $data       = $data['data']['list'];
+            $skus       = [];
+            foreach(Sku::whereIn('sku_id', array_column($data, 'skuId'))->where('store_id', $storeid)->where('platform', $platform)->get() as $item){
+                $skus[$item->sku_id]    = $item;
+            }
+            foreach($data as $item){
+                if(isset($skus[$item['skuId']])){
+                    $skus[$item['skuId']]->kuweima  = implode(',', array_column($item['storeLocationInfoList'], 'locationCode'));
+                    $skus[$item['skuId']]->save();
+                    $nums++;
+                }
+            }
+
+            $length         = count($data);
+            $hads           += $length;
+            if($length < $pagesize){
+                break;
+            }
+        }
+        return $this->success(['updated' => $nums, 'origins' => $hads], '库位码更新成功! ' . $nums . '/' . $hads);
     }
 }
