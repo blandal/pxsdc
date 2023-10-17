@@ -119,11 +119,14 @@ class OrderProduct extends Model{
         }
         if($sku->bind){
             $sku        = Sku::find(explode(',', $sku->bind)[0]);
-            try {
+            if($sku){
                 return $sku->kuweima;
-            } catch (\Exception $e) {
-                dd($e->getMessage(), $sku);
             }
+            // try {
+            //     return $sku->kuweima;
+            // } catch (\Exception $e) {
+            //     dd($e->getMessage(), $sku);
+            // }
         }
         return null;
     }
