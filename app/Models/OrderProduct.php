@@ -122,7 +122,7 @@ class OrderProduct extends Model{
             try {
                 return $sku->kuweima;
             } catch (\Exception $e) {
-                dd($e->getMessage());
+                dd($e->getMessage(), $sku);
             }
         }
         return null;
