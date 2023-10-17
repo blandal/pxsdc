@@ -111,12 +111,19 @@ class OrderProduct extends Model{
             return null;
         }
         $sku        = Sku::find($this->sku_table_id);
+        if(!$sku){
+            return '';
+        }
         if($this->platform_id == 1){
             return $sku->kuweima;
         }
         if($sku->bind){
             $sku        = Sku::find(explode(',', $sku->bind)[0]);
-            return $sku->kuweima;
+            try {
+                return $sku->kuweima;
+            } catch (\Exception $e) {
+                dd($e->getMessage());
+            }
         }
         return null;
     }
