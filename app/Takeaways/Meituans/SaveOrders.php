@@ -32,7 +32,7 @@ class SaveOrders extends Meituan{
 	private $poiid 		= 18463790;
 	private $sccookie 	= null;
 	public function __construct(array $data, Store $store){
-		$thos->sccookie 	= file_get_contents(storage_path('app/meituan.cookie'));
+		$this->sccookie 	= file_get_contents(storage_path('app/meituan.cookie'));
 		$this->store 		= $store;
 		$this->platform 	= $store->platform->id;
 		if(!isset($data[0])){
