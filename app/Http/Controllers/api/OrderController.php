@@ -18,7 +18,7 @@ class OrderController extends Controller{
     private $sccookie   = null;
 
     public function __construct(){
-        $this->cookie   = file_get_contents(storage_path('app/meituan.cookie'));
+        $this->sccookie   = file_get_contents(storage_path('app/meituan.cookie'));
     }
 
 
