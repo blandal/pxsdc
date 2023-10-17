@@ -15,9 +15,12 @@ class OrderController extends Controller{
 
     //闪电仓参数
     private $poiid      = 18463790;
-    private $sccookie   = '_lxsdk_cuid=18a5dae5e60c8-002c984d7d55a2-26031f51-1fa400-18a5dae5e60c8; _lxsdk=18a5dae5e60c8-002c984d7d55a2-26031f51-1fa400-18a5dae5e60c8; uuid=6394452bd591b7090f6e.1693788822.1.0.0; WEBDFPID=2u4x8uvv5663567y13904zyu060w9yu181z4wzv391y97958wu93z3zv-2009148825058-1693788824367WGWAMCKfd79fef3d01d5e9aadc18ccd4d0c95079724; _ga=GA1.1.373643657.1694075781; _ga_95GX0SH5GM=GS1.1.1694836653.7.1.1694836741.0.0.0; uuid_update=true; acctId=162626363; token=0ZEKX2G_evEV333G7r_BRq0PUDvG-5K1JLPiJ6JaYZ40*; brandId=-1; isOfflineSelfOpen=0; city_id=350100; isChain=0; existBrandPoi=true; ignore_set_router_proxy=false; region_version=1688959557; newCategory=true; bsid=pVld0HLCk-it4Z32JBvwH7HJimH22Eb8Q1RYYZ2IzEc3h0VjLBaRtV6hCmJNGgZVPs81G20JFwxLe1QE9ux60w; device_uuid=!442e66a1-9d02-409f-86ee-6b5be3cbb051; grayPath=newRoot; logistics_support=1; cityId=350100; provinceId=350000; city_location_id=350100; location_id=350104; pushToken=0ZEKX2G_evEV333G7r_BRq0PUDvG-5K1JLPiJ6JaYZ40*; pharmacistAccount=0; igateApp=shangouepc; _et=f-Ami5RAzSjsTxw8NdjOCSiuyt6DuXGA1V1RrS-2k0Pjz-Ycoee7Fm0Z1CUlSibmqKWBATrA4giReAdGtzdpXQ; wpush_server_url=wss://wpush.meituan.com; wmPoiId=18463790; region_id=1000350100; accessToken=pVld0HLCk-it4Z32JBvwH7HJimH22Eb8Q1RYYZ2IzEc3h0VjLBaRtV6hCmJNGgZVPs81G20JFwxLe1QE9ux60w; set_info=%7B%22wmPoiId%22%3A18463790%2C%22region_id%22%3A%221000350100%22%2C%22region_version%22%3A1688959557%7D; JSESSIONID=ev9mdxzpnm1mt1w438usmhuq; _gw_ab_call_29856_23=TRUE; _gw_ab_29856_23=73; cacheTimeMark=2023-09-27; shopCategory=market; signToken="uLvxwg0UwYyrDDacZsonRbutk64EdNTR3nLGU6nEoFfAxirD6pjrYGNLGX4XVZfTAk7m6TKZSJuNJd66I+glc09TX2E3aPI2+jZpxFJd7E6KdaoBl9rMKQXmUfvEpJGJsFS4DDVV9jhpusQKvP899w=="; _lxsdk_s=18ad377aa05-6d6-9aa-2f5%7C%7C150';
+    private $sccookie   = null;
 
-
+    public function __construct(){
+        parent::__construct();
+        $this->cookie   = file_get_contents(storage_path('app/meituan.cookie'));
+    }
 
 
     public function fmtdata($data){

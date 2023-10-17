@@ -51,6 +51,11 @@ class IndexController extends Controller{
         $store      = $request->post('store_id');
         $cookie     = $request->post('cookie');
 
+        if($platform == 3){
+            file_put_contents(storage_path('app/meituan.cookie'), $cookie);
+            return $this->success('美团闪仓cookie更新成功!');
+        }
+
         $s          = Store::where(['platform_id' => $platform, 'store_id' => $store])->first();
         if(!$s){
             return $this->error('店铺不存在!');

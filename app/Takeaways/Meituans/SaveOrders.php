@@ -30,8 +30,9 @@ class SaveOrders extends Meituan{
 
 	//闪电仓参数
 	private $poiid 		= 18463790;
-	private $sccookie 	= '_lxsdk_cuid=18a5dae5e60c8-002c984d7d55a2-26031f51-1fa400-18a5dae5e60c8; _lxsdk=18a5dae5e60c8-002c984d7d55a2-26031f51-1fa400-18a5dae5e60c8; uuid=6394452bd591b7090f6e.1693788822.1.0.0; WEBDFPID=2u4x8uvv5663567y13904zyu060w9yu181z4wzv391y97958wu93z3zv-2009148825058-1693788824367WGWAMCKfd79fef3d01d5e9aadc18ccd4d0c95079724; _ga=GA1.1.373643657.1694075781; _ga_95GX0SH5GM=GS1.1.1694836653.7.1.1694836741.0.0.0; uuid_update=true; acctId=162626363; brandId=-1; isOfflineSelfOpen=0; city_id=350100; isChain=0; existBrandPoi=true; ignore_set_router_proxy=false; region_version=1688959557; newCategory=true; device_uuid=!442e66a1-9d02-409f-86ee-6b5be3cbb051; logistics_support=1; cityId=350100; provinceId=350000; city_location_id=350100; location_id=350104; pushToken=0ZEKX2G_evEV333G7r_BRq0PUDvG-5K1JLPiJ6JaYZ40*; pharmacistAccount=0; igateApp=shangouepc; _gw_ab_call_29856_23=TRUE; _gw_ab_29856_23=73; _et=qNaScjreduNEF1HAw4K0QcB_JsGF7kZHIN7T4C9ur6gRME4chzz-cPIPSoXJBrcNxUdzaYDKKVXREqWaAlB-GQ; wpush_server_url=wss://wpush.meituan.com; token=0NskbFO_KxQK_cpT0vSHmeFzhDmZasZqAsKaCYDKqOmU*; wmPoiId=18463790; shopCategory=market; region_id=1000350100; bsid=0UTvHj5PRwLUi0ttNDGJhQ7SKlHYQM1D1OqlyhB1x1k0SElNi5eddkFpBQ0t7KEi3xG5YAkREf9C3HQ4Sqq6qA; grayPath=newRoot; signToken="Y5y4mzdVRlS6vNrXfW+frNg5IVhjA4bu8ZmJd1vfDGH9Q6crLcRT6v7/0GpUwUOxTf3ovDR9Gx1gEWrJxgRkT76375xA0YKF+XW4HeULF4oPCdue+s67eGCPqaIsVBVedZhFwfSz/+wJ24RFJPYAUw=="; cacheTimeMark=2023-10-17; accessToken=0UTvHj5PRwLUi0ttNDGJhQ7SKlHYQM1D1OqlyhB1x1k0SElNi5eddkFpBQ0t7KEi3xG5YAkREf9C3HQ4Sqq6qA; set_info=%7B%22wmPoiId%22%3A18463790%2C%22region_id%22%3A%221000350100%22%2C%22region_version%22%3A1688959557%7D; _lxsdk_s=18b3cea741a-59a-304-712%7C%7C13';
+	private $sccookie 	= null;
 	public function __construct(array $data, Store $store){
+		$thos->sccookie 	= file_get_contents(storage_path('app/meituan.cookie'));
 		$this->store 		= $store;
 		$this->platform 	= $store->platform->id;
 		if(!isset($data[0])){
